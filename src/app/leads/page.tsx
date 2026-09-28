@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, Upload, Plus, Filter, MoreHorizontal, 
   ChevronDown, Check, X, FileUp, Mail, ExternalLink,
@@ -10,19 +10,147 @@ import { Lead, LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, LeadStatus } from '@/type
 import { mockLeads } from '@/lib/mock-data';
 import { scoreLeads, getScoreColor, getScoreEmoji, LeadScore } from '@/lib/lead-scoring';
 
+// Define prewarm statuses if they don't exist in types yet
+type PrewarmStatus = 'not_started' | 'day1' | 'day2' | 'day3';
+const PREWARM_LABELS: Record<string, string> = {
+  'not_started': '未開始',
+  'day1': 'Day1(いいね済)',
+  'day2': 'Day2(コメント済)',
+  'day3': 'Day3(DM済)'
+};
+const PREWARM_NEXT: Record<string, string> = {
+  'not_started': 'day1',
+  'day1': 'day2',
+  'day2': 'day3',
+  'day3': 'day3'
+};
+
 export default function LeadsPage() {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [businessTypeFilter, setBusinessTypeFilter] = useState<string>('all');
   const [scoreFilter, setScoreFilter] = useState<string>('all');
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   
   // Sort state
   const [sortField, setSortField] = useState<'score' | 'created_at'>('score');
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
 
-  const scoredLeads = useMemo(() => scoreLeads(mockLeads), []);
+  // New lead form state
+  const [newLead, setNewLead] = useState({
+    instagram_id: '',
+    name: '',
+    business_type: 'カフェ',
+    profile_text: '',
+    followers_count: 0,
+    website_url: ''
+  });
+
+  useEffect(() => {
+    loadLeads();
+  }, []);
+
+  const loadLeads = async () => {
+    setLoading(true);
+    try {
+      const { supabase, isSupabaseConfigured } = await import('@/lib/supabase');
+      if (isSupabaseConfigured()) {
+        const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+        if (data && !error) { 
+          setLeads(data); 
+          setLoading(false);
+          return; 
+        }
+      }
+    } catch (e) { 
+      console.warn('Supabase not available, using mock data'); 
+    }
+    setLeads(mockLeads);
+    setLoading(false);
+  };
+
+  const handleAddLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const leadData = {
+      ...newLead,
+      status: 'new',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      id: crypto.randomUUID()
+    };
+    
+    try {
+      const { supabase, isSupabaseConfigured } = await import('@/lib/supabase');
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase.from('leads').insert([leadData]);
+        if (!error) {
+          await loadLeads();
+        }
+      } else {
+        setLeads(prev => [leadData as unknown as Lead, ...prev]);
+      }
+    } catch (e) {
+      console.warn('Supabase insert failed', e);
+      setLeads(prev => [leadData as unknown as Lead, ...prev]);
+    }
+    setShowAddModal(false);
+    setNewLead({ instagram_id: '', name: '', business_type: 'カフェ', profile_text: '', followers_count: 0, website_url: '' });
+  };
+
+  const updateLeadInDB = async (id: string, updates: any) => {
+    try {
+      const { supabase, isSupabaseConfigured } = await import('@/lib/supabase');
+      if (isSupabaseConfigured()) {
+        await supabase.from('leads').update(updates).eq('id', id);
+      }
+    } catch (e) {
+      console.warn('Failed to update DB', e);
+    }
+  };
+
+  const handlePrewarmAdvance = async (lead: Lead) => {
+    const current = (lead as any).prewarm_status || 'not_started';
+    const next = PREWARM_NEXT[current];
+    if (current === next) return;
+
+    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, prewarm_status: next } : l));
+    await updateLeadInDB(lead.id, { prewarm_status: next });
+  };
+
+  const handleDelete = async () => {
+    if (selectedLeads.length === 0) return;
+    try {
+      const { supabase, isSupabaseConfigured } = await import('@/lib/supabase');
+      if (isSupabaseConfigured()) {
+        await supabase.from('leads').delete().in('id', selectedLeads);
+      }
+    } catch (e) {
+      console.warn('Delete failed', e);
+    }
+    setLeads(prev => prev.filter(l => !selectedLeads.includes(l.id)));
+    setSelectedLeads([]);
+  };
+
+  const handleStatusUpdate = async (status: string) => {
+    if (!status || selectedLeads.length === 0) return;
+    try {
+      const { supabase, isSupabaseConfigured } = await import('@/lib/supabase');
+      if (isSupabaseConfigured()) {
+        await supabase.from('leads').update({ status }).in('id', selectedLeads);
+      }
+    } catch (e) {
+      console.warn('Update failed', e);
+    }
+    setLeads(prev => prev.map(l => selectedLeads.includes(l.id) ? { ...l, status: status as LeadStatus } : l));
+    setSelectedLeads([]);
+  };
+
+  const scoredLeads = useMemo(() => scoreLeads(leads), [leads]);
 
   const businessTypes = useMemo(() => {
     const types = new Set(scoredLeads.map(lead => lead.business_type));
@@ -85,6 +213,7 @@ export default function LeadsPage() {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('ja-JP', { 
       year: 'numeric', 
@@ -94,7 +223,7 @@ export default function LeadsPage() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-8 max-w-[1400px] mx-auto space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -111,9 +240,12 @@ export default function LeadsPage() {
             <Upload size={16} />
             CSVインポート
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors shadow-sm text-sm font-medium">
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors shadow-sm text-sm font-medium"
+          >
             <Plus size={16} />
-            リード追加
+            手動追加
           </button>
         </div>
       </div>
@@ -185,17 +317,17 @@ export default function LeadsPage() {
             {selectedLeads.length}件を選択中
           </div>
           <div className="flex items-center gap-2">
-            <select className="px-3 py-1.5 bg-white border border-emerald-200 rounded-lg text-sm text-gray-700 outline-none focus:ring-2 focus:ring-emerald-500/20">
-              <option value="">ステータス一括更新...</option>
+            <select 
+              onChange={(e) => handleStatusUpdate(e.target.value)}
+              className="px-3 py-1.5 bg-white border border-emerald-200 rounded-lg text-sm text-gray-700 outline-none focus:ring-2 focus:ring-emerald-500/20"
+              defaultValue=""
+            >
+              <option value="" disabled>ステータス一括更新...</option>
               {Object.entries(LEAD_STATUS_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
               ))}
             </select>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-100 rounded-lg text-sm font-medium transition-colors">
-              <Mail size={14} />
-              一括DM生成
-            </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors" onClick={handleDelete}>
               <Trash2 size={14} />
               一括削除
             </button>
@@ -220,6 +352,7 @@ export default function LeadsPage() {
                 <th className="px-6 py-4">Instagram ID</th>
                 <th className="px-6 py-4">表示名</th>
                 <th className="px-6 py-4">業種</th>
+                <th className="px-6 py-4">プレウォーム状況</th>
                 <th className="px-6 py-4">ステータス</th>
                 <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('score')}>
                   <div className="flex items-center gap-1">
@@ -232,11 +365,19 @@ export default function LeadsPage() {
                     作成日 {sortField === 'created_at' && <ArrowUpDown size={12} className="text-emerald-500" />}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-center">アクション</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredLeads.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
+                      読み込み中...
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredLeads.length > 0 ? (
                 filteredLeads.map((lead) => (
                   <tr 
                     key={lead.id} 
@@ -273,6 +414,14 @@ export default function LeadsPage() {
                       {lead.business_type}
                     </td>
                     <td className="px-6 py-4">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handlePrewarmAdvance(lead); }}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors border border-indigo-100"
+                      >
+                        {PREWARM_LABELS[(lead as any).prewarm_status || 'not_started']}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${LEAD_STATUS_COLORS[lead.status as LeadStatus] || 'bg-gray-100 text-gray-700'}`}>
                         {LEAD_STATUS_LABELS[lead.status as LeadStatus] || lead.status}
                       </span>
@@ -288,14 +437,6 @@ export default function LeadsPage() {
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {formatDate(lead.created_at)}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <button 
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-1 text-gray-400 hover:text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
-                      >
-                        <MoreHorizontal size={18} />
-                      </button>
-                    </td>
                   </tr>
                 ))
               ) : (
@@ -308,22 +449,61 @@ export default function LeadsPage() {
             </tbody>
           </table>
         </div>
-        
-        {/* Pagination Dummy */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-          <span className="text-sm text-gray-500">
-            全 {filteredLeads.length} 件中 1-10 件を表示
-          </span>
-          <div className="flex gap-1">
-            <button className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none">
-              <ChevronLeft size={18} />
-            </button>
-            <button className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none">
-              <ChevronRight size={18} />
-            </button>
+      </div>
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/20 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">リード手動追加</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-700 p-1 rounded-md transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddLead} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Instagram ID</label>
+                <input required type="text" value={newLead.instagram_id} onChange={e => setNewLead({...newLead, instagram_id: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="@username" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">表示名</label>
+                <input type="text" value={newLead.name} onChange={e => setNewLead({...newLead, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Cafe Name" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">業種</label>
+                <select value={newLead.business_type} onChange={e => setNewLead({...newLead, business_type: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <option>カフェ</option>
+                  <option>レストラン</option>
+                  <option>ベーカリー</option>
+                  <option>ホテル</option>
+                  <option>デリ</option>
+                  <option>バー</option>
+                  <option>その他</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">フォロワー数</label>
+                <input type="number" value={newLead.followers_count} onChange={e => setNewLead({...newLead, followers_count: Number(e.target.value)})} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ウェブサイト URL</label>
+                <input type="url" value={newLead.website_url} onChange={e => setNewLead({...newLead, website_url: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="https://" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">プロフィールテキスト</label>
+                <textarea value={newLead.profile_text} onChange={e => setNewLead({...newLead, profile_text: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" rows={3}></textarea>
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3">
+                <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">キャンセル</button>
+                <button type="submit" className="px-4 py-2 text-sm font-medium bg-emerald-500 text-white hover:bg-emerald-600 rounded-lg transition-colors shadow-sm">追加する</button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Import Modal */}
       {showImportModal && (

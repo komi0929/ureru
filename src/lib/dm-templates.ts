@@ -72,8 +72,8 @@ export function generateDM(template: DmTemplateConfig, lead: Lead): string {
   
   // Safely cast or get properties since Lead type structure might vary slightly
   const leadAny = lead as any;
-  const storeName = leadAny.store_name || leadAny.storeName || leadAny.name || 'ご担当者';
-  const businessType = leadAny.industry || leadAny.businessType || leadAny.type || 'default';
+  const storeName = lead.display_name || (lead as any).name || 'ご担当者';
+  const businessType = lead.business_type || 'default';
   
   const replacements: Record<string, string> = {
     'store_name': storeName,

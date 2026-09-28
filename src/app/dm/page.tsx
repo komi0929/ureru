@@ -29,12 +29,12 @@ interface PacingStats {
 }
 
 export default function DMGenerationPage() {
-  // Data
   const [templates, setTemplates] = useState<DmTemplateConfig[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   
   const [leads, setLeads] = useState<(Lead & { scoreData: LeadScore })[]>([]);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   
   const [generatedText, setGeneratedText] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
@@ -50,23 +50,36 @@ export default function DMGenerationPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
-    // Load templates
     const tmpls = getTemplates();
     setTemplates(tmpls);
     if (tmpls.length > 0) {
       setSelectedTemplateId(tmpls[0].id);
     }
+    loadLeads();
+    fetchPacingStats();
+  }, []);
 
-    // Load and score leads
-    const eligibleLeads = mockLeads.filter(l => l.status === 'new' || l.status === 'dm_drafted');
+  const loadLeads = async () => {
+    setLoading(true);
+    let rawLeads = mockLeads;
+    try {
+      const { supabase, isSupabaseConfigured } = await import('@/lib/supabase');
+      if (isSupabaseConfigured()) {
+        const { data, error } = await supabase.from('leads').select('*').in('status', ['new', 'dm_drafted']).order('created_at', { ascending: false });
+        if (data && !error) { rawLeads = data as any; }
+      }
+    } catch (e) { 
+      console.warn('Supabase not available, using mock data'); 
+    }
+    
+    const eligibleLeads = rawLeads.filter(l => l.status === 'new' || l.status === 'dm_drafted');
     const scoredEligibleLeads = scoreLeads(eligibleLeads);
     setLeads(scoredEligibleLeads);
     if (scoredEligibleLeads.length > 0) {
       setSelectedLeadId(scoredEligibleLeads[0].id);
     }
-
-    fetchPacingStats();
-  }, []);
+    setLoading(false);
+  };
 
   useEffect(() => {
     if (toast) {
@@ -81,11 +94,11 @@ export default function DMGenerationPage() {
       if (res.ok) {
         const data = await res.json();
         setPacingStats({
-          sent_last_hour: data.sent_last_hour,
-          sent_last_24h: data.sent_last_24h,
-          status: data.status,
-          max_per_hour: data.max_per_hour,
-          max_per_24h: data.max_per_24h,
+          sent_last_hour: data.sent_last_hour || 0,
+          sent_last_24h: data.sent_last_24h || 0,
+          status: data.status || 'OK',
+          max_per_hour: data.max_per_hour || 5,
+          max_per_24h: data.max_per_24h || 25,
         });
       }
     } catch (err) {
@@ -112,18 +125,28 @@ export default function DMGenerationPage() {
   };
 
   const handleCopy = async () => {
-    if (!generatedText) return;
+    if (!generatedText || !selectedLead) return;
     try {
       await navigator.clipboard.writeText(generatedText);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
+      
+      // Update DB Status
+      try {
+        const { supabase, isSupabaseConfigured } = await import('@/lib/supabase');
+        if (isSupabaseConfigured()) {
+          await supabase.from('leads').update({ status: 'dm_sent' }).eq('id', selectedLead.id);
+        }
+      } catch (e) {
+         console.warn('DB update failed');
+      }
       
       try {
         await fetch('/api/dm/pacing', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            lead_id: selectedLead?.id,
+            lead_id: selectedLead.id,
             message_id: ''
           })
         });
@@ -138,6 +161,20 @@ export default function DMGenerationPage() {
       console.error('Failed to copy text: ', err);
       setToast({ message: 'コピーに失敗しました', type: 'error' });
     }
+  };
+
+  const markPrewarmReady = async () => {
+    if (!selectedLead) return;
+    try {
+      const { supabase, isSupabaseConfigured } = await import('@/lib/supabase');
+      if (isSupabaseConfigured()) {
+        await supabase.from('leads').update({ prewarm_status: 'day3' }).eq('id', selectedLead.id);
+      }
+    } catch (e) {
+      console.warn('DB update failed');
+    }
+    setLeads(prev => prev.map(l => l.id === selectedLead.id ? { ...l, prewarm_status: 'day3' } : l));
+    setToast({ message: 'プレウォーム完了とマークしました', type: 'success' });
   };
 
   const getStatusColor = (status: string) => {
@@ -221,18 +258,22 @@ export default function DMGenerationPage() {
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">送信先リードを選択</label>
               <div className="relative">
-                <select 
-                  value={selectedLeadId || ''} 
-                  onChange={(e) => setSelectedLeadId(e.target.value)}
-                  className="w-full bg-white border border-gray-200 text-gray-800 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm appearance-none cursor-pointer"
-                >
-                  <option value="" disabled>リードを選択...</option>
-                  {leads.map(lead => (
-                    <option key={lead.id} value={lead.id}>
-                      {getScoreEmoji(lead.scoreData.total)} {lead.name} ({lead.instagram_id}) - スコア: {lead.scoreData.total}
-                    </option>
-                  ))}
-                </select>
+                {loading ? (
+                  <div className="p-3 text-sm text-gray-500">読み込み中...</div>
+                ) : (
+                  <select 
+                    value={selectedLeadId || ''} 
+                    onChange={(e) => setSelectedLeadId(e.target.value)}
+                    className="w-full bg-white border border-gray-200 text-gray-800 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm appearance-none cursor-pointer"
+                  >
+                    <option value="" disabled>リードを選択...</option>
+                    {leads.map(lead => (
+                      <option key={lead.id} value={lead.id}>
+                        {getScoreEmoji(lead.scoreData.total)} {lead.name} ({lead.instagram_id}) - スコア: {lead.scoreData.total}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
 
@@ -253,7 +294,17 @@ export default function DMGenerationPage() {
                       <div className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${getScoreColor(selectedLead.scoreData.total)}`}>
                         {getScoreEmoji(selectedLead.scoreData.total)} スコア: {selectedLead.scoreData.total}
                       </div>
-                    内</div>
+                      
+                      {/* Prewarm status */}
+                      <div className="flex items-center gap-2 ml-auto">
+                         <span className="text-xs font-medium bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md border border-indigo-100">
+                           プレウォーム: { (selectedLead as any).prewarm_status === 'day3' ? '完了' : '未完了' }
+                         </span>
+                         {(selectedLead as any).prewarm_status !== 'day3' && (
+                           <button onClick={markPrewarmReady} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md transition-colors">完了にする</button>
+                         )}
+                      </div>
+                    </div>
                     <p className="text-sm text-gray-600 leading-relaxed mb-4">
                       {selectedLead.profile_text || 'プロフィール文なし'}
                     </p>
