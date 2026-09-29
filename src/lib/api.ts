@@ -289,3 +289,110 @@ export async function getFunnelStats(): Promise<{ stage: string; count: number }
     count: stats[stage] || 0
   }));
 }
+
+// --------------
+// LP連携ヘルパー（SoyStories LP Webhook用）
+// --------------
+
+/** LP経由のリードをメールアドレスで検索 */
+export async function findLeadByEmail(email: string): Promise<Lead | null> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .contains('metadata', { email })
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data) return data as Lead;
+    } catch (e) {
+      console.warn('findLeadByEmail exception:', e);
+    }
+  }
+
+  // フォールバック: mock leads の metadata.email で検索
+  const found = fallbackLeads.find(l => {
+    const meta = l.metadata as Record<string, unknown> | undefined;
+    return meta?.email === email;
+  });
+  return found || null;
+}
+
+/** LP経由でリードを新規作成 */
+export async function createLeadFromLP(data: {
+  companyName: string;
+  contactName: string;
+  email: string;
+  phone?: string;
+  source: 'lp_sample' | 'lp_inquiry';
+  postalCode?: string;
+  address?: string;
+  notes?: string;
+}): Promise<Lead> {
+  const instagramId = `lp-${data.email.replace(/[^a-zA-Z0-9]/g, '-')}`;
+  const isSample = data.source === 'lp_sample';
+
+  const lead: Partial<Lead> = {
+    instagram_id: instagramId,
+    display_name: data.companyName,
+    name: data.companyName,
+    status: isSample ? 'sample_requested' : 'new',
+    business_type: 'カフェ',
+    tags: isSample ? ['LP_サンプル申込'] : ['LP_問合せ'],
+    notes: data.notes || null,
+    metadata: {
+      email: data.email,
+      phone: data.phone || null,
+      contact_name: data.contactName,
+      source: data.source,
+      postal_code: data.postalCode || null,
+      address: data.address || null,
+    },
+  };
+
+  return createLead(lead);
+}
+
+/** LP経由サンプル申込からサンプルレコードを作成 */
+export async function createSampleFromLP(data: {
+  leadId: string;
+  contactName: string;
+  address: string;
+  notes?: string;
+}): Promise<Sample> {
+  if (isSupabaseConfigured()) {
+    try {
+      const sample = {
+        lead_id: data.leadId,
+        status: 'requested',
+        requested_at: new Date().toISOString(),
+        recipient_name: data.contactName,
+        recipient_address: data.address,
+        notes: data.notes || null,
+        items: [],
+      };
+      const { data: resData, error } = await supabase.from('samples').insert([sample]).select().single();
+      if (!error && resData) return resData as Sample;
+      console.warn('Supabase createSampleFromLP error, falling back to mock:', error);
+    } catch (e) {
+      console.warn('Supabase createSampleFromLP exception, falling back to mock:', e);
+    }
+  }
+
+  // フォールバック
+  const newSample = {
+    id: `samp-lp-${Date.now()}`,
+    lead_id: data.leadId,
+    requested_at: new Date().toISOString(),
+    status: 'requested',
+    items: [],
+    recipient_name: data.contactName,
+    recipient_address: data.address,
+    tracking_number: null,
+    feedback_score: null,
+    feedback_notes: data.notes || null,
+  } as Sample;
+  fallbackSamples = [newSample, ...fallbackSamples];
+  return newSample;
+}
