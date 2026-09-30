@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   User, 
   Database, 
@@ -11,13 +11,55 @@ import {
   CheckCircle, 
   AlertCircle,
   Plus,
-  Trash2
+  Trash2,
+  Send,
+  RotateCcw,
 } from 'lucide-react';
+
+const DEFAULT_DM_TEMPLATE = `{{name}}こんにちは！突然のご連絡失礼いたします✨
+福岡でプラントベース（乳・卵不使用）のクラフトアイスを製造しているSoyStoriesと申します🌿
+
+貴店のこだわりメニューに合う無料サンプルをお届けしたいのですが、お試しいただけないでしょうか？🍨
+https://www.soystories.cafe/`;
 
 export default function SettingsPage() {
   // Account Settings
   const [username, setUsername] = useState('SoyStories Admin');
   const [email, setEmail] = useState('admin@soystories.com');
+
+  // DM Template Settings
+  const [dmTemplate, setDmTemplate] = useState(DEFAULT_DM_TEMPLATE);
+  const [templateSavedMsg, setTemplateSavedMsg] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('soystories_fixed_dm_template');
+      if (saved) setDmTemplate(saved);
+    } catch (e) {
+      console.warn(e);
+    }
+  }, []);
+
+  const handleSaveDmTemplate = () => {
+    try {
+      localStorage.setItem('soystories_fixed_dm_template', dmTemplate);
+      setTemplateSavedMsg(true);
+      setTimeout(() => setTemplateSavedMsg(false), 3000);
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  const handleResetDmTemplate = () => {
+    try {
+      localStorage.removeItem('soystories_fixed_dm_template');
+      setDmTemplate(DEFAULT_DM_TEMPLATE);
+      setTemplateSavedMsg(true);
+      setTimeout(() => setTemplateSavedMsg(false), 3000);
+    } catch (e) {
+      console.warn(e);
+    }
+  };
 
   // Supabase Settings
   const [supabaseUrl, setSupabaseUrl] = useState('');
@@ -128,6 +170,70 @@ export default function SettingsPage() {
               >
                 <Save size={16} />
                 保存
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* DM Template Settings */}
+        <section className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                <Send size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-medium text-gray-900">固定DM定型文設定</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  「営業モード」で送信するベースのDM文章を設定・編集・保存できます。
+                </p>
+              </div>
+            </div>
+            {templateSavedMsg && (
+              <span className="text-xs text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full font-semibold flex items-center gap-1.5 animate-in fade-in">
+                <CheckCircle size={14} />
+                設定を保存しました
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-gray-700">本文テンプレート:</span>
+              <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-mono text-[11px]">
+                自動置換変数: {'{{name}}'} = 〇〇様
+              </span>
+            </div>
+
+            <textarea
+              value={dmTemplate}
+              onChange={e => setDmTemplate(e.target.value)}
+              rows={8}
+              className="w-full p-4 border border-gray-200 rounded-2xl text-sm leading-relaxed text-gray-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none font-sans"
+              placeholder="DMの定型文を入力してください..."
+            />
+
+            <div className="flex items-center justify-between text-xs text-gray-400">
+              <span>文字数: {dmTemplate.length}文字</span>
+              <span>※150〜200文字以内がInstagramで最も読まれやすく返信率が高いです</span>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={handleResetDmTemplate}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition"
+              >
+                <RotateCcw size={14} />
+                初期文面にリセット
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDmTemplate}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition active:scale-95"
+              >
+                <Save size={16} />
+                定型文を保存する
               </button>
             </div>
           </div>

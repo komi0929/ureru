@@ -10,12 +10,15 @@ import {
   ShoppingCart, 
   BarChart3, 
   Settings,
+  Zap,
+  Sparkles,
 } from 'lucide-react';
 
 const navItems = [
+  { name: '営業モード', href: '/sales', icon: Zap },
+  { name: '店舗自動収集', href: '/discover', icon: Sparkles },
   { name: 'ダッシュボード', href: '/', icon: LayoutDashboard },
   { name: 'リード管理', href: '/leads', icon: Users },
-  { name: 'DM生成', href: '/dm', icon: MessageSquare },
   { name: 'サンプル管理', href: '/samples', icon: Package },
   { name: '受発注', href: '/orders', icon: ShoppingCart },
   { name: '分析', href: '/analytics', icon: BarChart3 },

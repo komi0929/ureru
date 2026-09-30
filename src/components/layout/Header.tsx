@@ -5,8 +5,9 @@ import { Bell, Search } from 'lucide-react';
 
 const pageTitles: Record<string, string> = {
   '/': 'ダッシュボード',
+  '/sales': '営業モード',
+  '/discover': '店舗自動収集',
   '/leads': 'リード管理',
-  '/dm': 'DM生成',
   '/samples': 'サンプル管理',
   '/orders': '受発注',
   '/analytics': '分析',

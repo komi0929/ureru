@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
 import { 
-  Search, Upload, Plus, Filter, MoreHorizontal, 
-  ChevronDown, Check, X, FileUp, Mail, ExternalLink,
-  ChevronLeft, ChevronRight, Trash2, ArrowUpDown
+  Search, Plus, Filter, MoreHorizontal, 
+  ChevronDown, Check, X, Mail, ExternalLink,
+  ChevronLeft, ChevronRight, Trash2, ArrowUpDown, Sparkles
 } from 'lucide-react';
 import { Lead, LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, LeadStatus } from '@/types';
 import { mockLeads } from '@/lib/mock-data';
@@ -34,7 +35,7 @@ export default function LeadsPage() {
   const [businessTypeFilter, setBusinessTypeFilter] = useState<string>('all');
   const [scoreFilter, setScoreFilter] = useState<string>('all');
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
-  const [showImportModal, setShowImportModal] = useState(false);
+
   const [showAddModal, setShowAddModal] = useState(false);
   
   // Sort state
@@ -233,16 +234,17 @@ export default function LeadsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors shadow-sm text-sm font-medium"
+          <Link
+            href="/discover"
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-colors shadow-sm text-sm font-semibold"
           >
-            <Upload size={16} />
-            CSVインポート
-          </button>
+            <Sparkles size={16} className="text-emerald-600" />
+            AIで店舗を自動収集
+          </Link>
+
           <button 
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors shadow-sm text-sm font-medium"
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-sm text-sm font-medium"
           >
             <Plus size={16} />
             手動追加
@@ -505,56 +507,8 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {/* Import Modal */}
-      {showImportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/20 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">CSVインポート</h3>
-              <button 
-                onClick={() => setShowImportModal(false)}
-                className="text-gray-400 hover:text-gray-700 p-1 rounded-md transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            
-            <div className="p-6">
-              <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:border-emerald-400 hover:bg-emerald-50/50 transition-colors cursor-pointer group">
-                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <FileUp size={24} />
-                </div>
-                <p className="text-sm font-medium text-gray-900 mb-1">
-                  クリックしてファイルを選択
-                </p>
-                <p className="text-xs text-gray-500">
-                  または、ここにCSVファイルをドラッグ＆ドロップ
-                </p>
-              </div>
 
-              <div className="mt-6 bg-gray-50 rounded-xl p-4 text-sm text-gray-600">
-                <p className="font-medium text-gray-700 mb-2">必須カラム:</p>
-                <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li>Instagram ID (instagram_username)</li>
-                  <li>業種 (business_type)</li>
-                </ul>
-              </div>
-            </div>
 
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
-              <button 
-                onClick={() => setShowImportModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                キャンセル
-              </button>
-              <button className="px-4 py-2 text-sm font-medium bg-emerald-500 text-white hover:bg-emerald-600 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                インポート実行
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
