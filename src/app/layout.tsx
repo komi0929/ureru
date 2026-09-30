@@ -1,14 +1,13 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import Sidebar from '@/components/layout/Sidebar';
-import Header from '@/components/layout/Header';
+import AppShell from '@/components/layout/AppShell';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'URERU - 営業支援＆受発注管理',
-  description: 'SoyStories B2B営業自動化プラットフォーム URERU',
+  title: 'SoyStories 統合プラットフォーム - 営業促進 & レシピ原価管理',
+  description: 'SoyStories クラフトアイス B2B営業支援＆レシピ原価管理システム',
 };
 
 export default function RootLayout({
@@ -18,14 +17,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      <body className={`${inter.className} bg-slate-50 text-slate-900 min-h-screen flex`}>
-        <Sidebar />
-        <div className="flex-1 ml-64 flex flex-col min-h-screen">
-          <Header />
-          <main className="flex-1 p-8">
-            {children}
-          </main>
-        </div>
+      <body className={`${inter.className} min-h-screen antialiased selection:bg-amber-400 selection:text-slate-900`}>
+        <AppShell>
+          {children}
+        </AppShell>
       </body>
     </html>
   );

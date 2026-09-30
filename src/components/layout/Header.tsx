@@ -4,7 +4,8 @@ import { usePathname } from 'next/navigation';
 import { Bell, Search } from 'lucide-react';
 
 const pageTitles: Record<string, string> = {
-  '/': 'ダッシュボード',
+  '/': 'ポータル',
+  '/dashboard': 'ダッシュボード (営業促進)',
   '/sales': '営業モード',
   '/discover': '店舗自動収集',
   '/leads': 'リード管理',

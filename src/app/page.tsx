@@ -1,321 +1,206 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import Link from 'next/link';
 import { 
-  Users, 
-  Send, 
-  Package, 
-  CheckCircle,
+  Rocket, 
+  Calculator, 
+  ArrowRight, 
+  Sparkles, 
+  CheckCircle2,
+  ChevronRight,
   TrendingUp,
-  AlertTriangle,
-  Clock,
-  Activity,
-  UserPlus
+  Boxes,
+  Users,
+  Building2,
+  ArrowUpRight
 } from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  Cell
-} from 'recharts';
 
-// Fallback Dashboard inline data
-const defaultKpiData = [
-  { id: 1, title: '総リード数', value: '0', change: '0%', isPositive: true, icon: Users, color: 'border-blue-500', iconColor: 'text-blue-500', bgColor: 'bg-blue-50' },
-  { id: 2, title: 'DM送信数', value: '0', change: '0%', isPositive: true, icon: Send, color: 'border-emerald-500', iconColor: 'text-emerald-500', bgColor: 'bg-emerald-50' },
-  { id: 3, title: 'サンプル送付数', value: '0', change: '0%', isPositive: true, icon: Package, color: 'border-orange-500', iconColor: 'text-orange-500', bgColor: 'bg-orange-50' },
-  { id: 4, title: '契約数', value: '0', change: '0%', isPositive: true, icon: CheckCircle, color: 'border-purple-500', iconColor: 'text-purple-500', bgColor: 'bg-purple-50' },
-];
-
-const defaultFunnelData = [
-  { name: 'リスト抽出', value: 3000 },
-  { name: 'DM送信', value: 1204 },
-  { name: '返信・反応', value: 450 },
-  { name: 'サンプル送付', value: 342 },
-  { name: '受注', value: 89 },
-];
-
-export default function Dashboard() {
-  const [loading, setLoading] = useState(true);
-  const [kpiData, setKpiData] = useState(defaultKpiData);
-  const [funnelData, setFunnelData] = useState(defaultFunnelData);
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const [dmPacingData, setDmPacingData] = useState({
-    status: 'OK',
-    sentLastHour: 0,
-    maxPerHour: 50,
-    sentLast24h: 0,
-    maxPer24h: 400,
-    cooldownMinutes: 0,
-  });
-
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
-    setLoading(true);
-    try {
-      const { supabase, isSupabaseConfigured } = await import('@/lib/supabase');
-      if (isSupabaseConfigured()) {
-        const [
-          { count: totalLeads },
-          { count: dmSent },
-          { count: samplesSent },
-          { count: contracts }
-        ] = await Promise.all([
-          supabase.from('leads').select('*', { count: 'exact', head: true }),
-          supabase.from('leads').select('*', { count: 'exact', head: true }).in('status', ['dm_sent', 'replied', 'sample_requested', 'contracted']),
-          supabase.from('samples').select('*', { count: 'exact', head: true }),
-          supabase.from('leads').select('*', { count: 'exact', head: true }).eq('status', 'contracted')
-        ]);
-
-        setKpiData([
-          { id: 1, title: '総リード数', value: String(totalLeads || 0), change: '+12.5%', isPositive: true, icon: Users, color: 'border-blue-500', iconColor: 'text-blue-500', bgColor: 'bg-blue-50' },
-          { id: 2, title: 'DM送信数', value: String(dmSent || 0), change: '+5.2%', isPositive: true, icon: Send, color: 'border-emerald-500', iconColor: 'text-emerald-500', bgColor: 'bg-emerald-50' },
-          { id: 3, title: 'サンプル送付数', value: String(samplesSent || 0), change: '+18.1%', isPositive: true, icon: Package, color: 'border-orange-500', iconColor: 'text-orange-500', bgColor: 'bg-orange-50' },
-          { id: 4, title: '契約数', value: String(contracts || 0), change: '-2.4%', isPositive: false, icon: CheckCircle, color: 'border-purple-500', iconColor: 'text-purple-500', bgColor: 'bg-purple-50' },
-        ]);
-
-        setFunnelData([
-          { name: 'リスト抽出', value: totalLeads || 0 },
-          { name: 'DM送信', value: dmSent || 0 },
-          { name: '返信・反応', value: Math.floor((dmSent || 0) * 0.2) }, // Approximation
-          { name: 'サンプル送付', value: samplesSent || 0 },
-          { name: '受注', value: contracts || 0 },
-        ]);
-      }
-    } catch (e) {
-      console.warn('Supabase not configured or query failed, using defaults');
-      setKpiData([
-        { id: 1, title: '総リード数', value: '2,845', change: '+12.5%', isPositive: true, icon: Users, color: 'border-blue-500', iconColor: 'text-blue-500', bgColor: 'bg-blue-50' },
-        { id: 2, title: 'DM送信数', value: '1,204', change: '+5.2%', isPositive: true, icon: Send, color: 'border-emerald-500', iconColor: 'text-emerald-500', bgColor: 'bg-emerald-50' },
-        { id: 3, title: 'サンプル送付数', value: '342', change: '+18.1%', isPositive: true, icon: Package, color: 'border-orange-500', iconColor: 'text-orange-500', bgColor: 'bg-orange-50' },
-        { id: 4, title: '契約数', value: '89', change: '-2.4%', isPositive: false, icon: CheckCircle, color: 'border-purple-500', iconColor: 'text-purple-500', bgColor: 'bg-purple-50' },
-      ]);
-    }
-
-    try {
-      const res = await fetch('/api/dm/pacing');
-      if (res.ok) {
-        const data = await res.json();
-        setDmPacingData({
-          status: data.status,
-          sentLastHour: data.sent_last_hour,
-          maxPerHour: data.max_per_hour,
-          sentLast24h: data.sent_last_24h,
-          maxPer24h: data.max_per_24h,
-          cooldownMinutes: 15,
-        });
-      }
-    } catch (e) {
-      setDmPacingData({ status: 'WARNING', sentLastHour: 45, maxPerHour: 50, sentLast24h: 380, maxPer24h: 400, cooldownMinutes: 15 });
-    }
-
-    // Mock recent activity
-    setRecentActivities([
-      { id: 1, type: 'contract', text: '「Vegan Kitchen AO」と契約を締結しました', time: '10分前', icon: CheckCircle, iconColor: 'text-purple-500', bgColor: 'bg-purple-50' },
-      { id: 2, type: 'sample', text: '「Sweets Atelier Y」にサンプルを発送しました', time: '1時間前', icon: Package, iconColor: 'text-orange-500', bgColor: 'bg-orange-50' },
-      { id: 3, type: 'dm', text: '新規ターゲットにDMを送信しました', time: '2時間前', icon: Send, iconColor: 'text-emerald-500', bgColor: 'bg-emerald-50' },
-      { id: 4, type: 'system', text: 'システムが更新されました', time: '昨日 15:30', icon: Activity, iconColor: 'text-gray-500', bgColor: 'bg-gray-50' },
-    ]);
-
-    setLoading(false);
-  };
-
+export default function PortalHomePage() {
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 relative">
+    <div className="min-h-screen bg-slate-50/60 text-slate-900 flex flex-col justify-between selection:bg-slate-900 selection:text-white font-sans antialiased">
       
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">ダッシュボード</h1>
-          <p className="text-gray-500 mt-1">日々のKPIと最新のアクティビティを確認します。</p>
+      {/* Google-like Clean Header */}
+      <header className="h-16 border-b border-slate-200/80 bg-white/80 backdrop-blur-md px-8 flex items-center justify-between sticky top-0 z-30">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-xs">
+            🌿
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-slate-900 tracking-tight text-base">SoyStories</span>
+            <span className="text-slate-300 font-normal">/</span>
+            <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+              Workspace Hub
+            </span>
+          </div>
         </div>
-        <div className="text-sm text-gray-500 flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100">
-          <Clock className="w-4 h-4 text-emerald-500" />
-          <span>最終更新: ちょうど今</span>
-        </div>
-      </div>
 
-      {loading ? (
-        <div className="flex justify-center py-20 text-gray-500">
-           <div className="flex items-center gap-2">
-             <div className="w-6 h-6 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
-             データ取得中...
-           </div>
+        <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 font-medium">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Production v2.0</span>
+          </div>
         </div>
-      ) : (
-        <>
-          {/* KPI Cards Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {kpiData.map((kpi: any) => {
-              const Icon = kpi.icon || Users; 
-              return (
-                <div key={kpi.id} className={`bg-white rounded-2xl p-6 shadow-sm border-l-4 ${kpi.color} flex flex-col gap-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1`}>
-                  <div className="flex items-center justify-between">
-                    <div className={`p-3 rounded-2xl ${kpi.bgColor}`}>
-                      <Icon className={`w-6 h-6 ${kpi.iconColor}`} />
-                    </div>
-                    <div className={`flex items-center gap-1 text-sm font-semibold px-2 py-1 rounded-full ${
-                      kpi.isPositive ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'
-                    }`}>
-                      {kpi.isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingUp className="w-4 h-4 rotate-180" />}
-                      {kpi.change}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">{kpi.title}</p>
-                    <h3 className="text-3xl font-bold text-gray-800 tracking-tight">{kpi.value}</h3>
-                  </div>
-                </div>
-              );
-            })}
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-16 max-w-6xl mx-auto w-full">
+        
+        {/* Title & Introduction */}
+        <div className="text-center max-w-2xl mb-12 space-y-3">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-800 text-xs font-medium">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+            <span>SoyStories クラフトアイス統合オペレーション</span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Sales Funnel Chart */}
-            <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+            利用するアプリケーションを選択
+          </h1>
+          <p className="text-sm text-slate-500 leading-relaxed max-w-lg mx-auto">
+            B2B店舗開拓を自動化する営業支援システムと、1個あたりの製造原価・粗利率を管理するレシピ原価管理システムを目的別にご利用いただけます。
+          </p>
+        </div>
+
+        {/* 2 Main Cards (Clean & Refined like Google Workspace / Stripe) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+          
+          {/* Card 1: 営業促進 (URERU) */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-8 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
+            <div>
+              {/* Card Header Icon & Badge */}
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-emerald-500" />
-                  セールスファネル
-                </h2>
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                  <Rocket className="w-6 h-6" />
+                </div>
+                <span className="text-xs font-medium text-emerald-700 bg-emerald-50/80 px-2.5 py-1 rounded-md border border-emerald-200/50">
+                  Sales Automation
+                </span>
               </div>
-              <div className="flex-1 min-h-[320px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={funnelData}
-                    layout="vertical"
-                    margin={{ top: 10, right: 30, left: 50, bottom: 10 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-                    <XAxis type="number" hide />
-                    <YAxis 
-                      dataKey="name" 
-                      type="category" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: '#6b7280', fontSize: 13, fontWeight: 500 }}
-                    />
-                    <Tooltip 
-                      cursor={{fill: '#f9fafb'}}
-                      contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', padding: '12px 16px' }}
-                      itemStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                    />
-                    <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={40}>
-                      {funnelData.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={`#4ade80`} fillOpacity={1 - (index * 0.12)} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+
+              {/* Title & Description */}
+              <h2 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-emerald-700 transition-colors">
+                営業促進ツール <span className="text-sm font-semibold text-slate-400 font-mono ml-1">URERU</span>
+              </h2>
+              <p className="text-xs text-slate-500 leading-relaxed mb-6">
+                Instagramからの見込み店舗抽出から、AIによるパーソナライズDM送信、無料サンプルのカンバン配送管理、受発注・請求書発行までをワンストップで支援。
+              </p>
+
+              {/* Feature List */}
+              <div className="space-y-2.5 mb-8 border-t border-slate-100 pt-5">
+                <div className="flex items-center gap-2.5 text-xs text-slate-600">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                  <span>店舗自動収集 & AIパーソナライズDM生成</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-600">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                  <span>サンプル送付 5段階ドラッグ＆ドロップ カンバン</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-600">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                  <span>受発注履歴管理 ＆ 請求書PDF自動出力</span>
+                </div>
               </div>
             </div>
 
-            {/* Right Column: Pacing & Activity */}
-            <div className="space-y-8 flex flex-col">
-              
-              {/* DM Pacing Widget */}
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 transition-all hover:shadow-md">
-                <h2 className="text-lg font-bold text-gray-800 mb-5 flex items-center gap-2">
-                  <Send className="w-5 h-5 text-emerald-500" />
-                  DM送信ペーシング
-                </h2>
-                
-                <div className="space-y-6">
-                  {/* Status Banner */}
-                  <div className={`p-4 rounded-2xl flex items-start gap-3 ${
-                    dmPacingData.status === 'OK' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                    dmPacingData.status === 'WARNING' ? 'bg-yellow-50 text-yellow-700 border border-yellow-100' :
-                    'bg-red-50 text-red-700 border border-red-100'
-                  }`}>
-                    {dmPacingData.status === 'OK' ? <CheckCircle className="w-5 h-5 mt-0.5 shrink-0" /> : <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0" />}
-                    <div>
-                      <p className="font-bold text-sm">
-                        {dmPacingData.status === 'OK' ? '送信ペース正常' :
-                         dmPacingData.status === 'WARNING' ? '送信制限に接近中' :
-                         '送信制限中'}
-                      </p>
-                      {(dmPacingData.status === 'WARNING' || dmPacingData.status === 'STOP') && (
-                        <p className="text-xs mt-1 font-medium opacity-90">クールダウンまで: 約{dmPacingData.cooldownMinutes}分</p>
-                      )}
-                    </div>
-                  </div>
+            {/* Actions */}
+            <div>
+              <Link
+                href="/dashboard"
+                className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-all shadow-xs group-hover:bg-emerald-600"
+              >
+                <span>営業促進ツールを開く</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
 
-                  {/* Progress: 1 Hour */}
-                  <div>
-                    <div className="flex justify-between text-sm mb-2.5">
-                      <span className="text-gray-600 font-medium flex items-center gap-1"><Clock className="w-3.5 h-3.5"/>過去1時間</span>
-                      <span className="text-gray-800 font-bold">{dmPacingData.sentLastHour} <span className="text-gray-400 font-normal">/ {dmPacingData.maxPerHour}件</span></span>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                      <div 
-                        className={`h-3 rounded-full transition-all duration-1000 ${
-                          (dmPacingData.sentLastHour / dmPacingData.maxPerHour) > 0.9 ? 'bg-red-500' :
-                          (dmPacingData.sentLastHour / dmPacingData.maxPerHour) > 0.7 ? 'bg-yellow-400' : 'bg-emerald-400'
-                        }`} 
-                        style={{ width: `${Math.min(100, (dmPacingData.sentLastHour / dmPacingData.maxPerHour) * 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* Progress: 24 Hours */}
-                  <div>
-                    <div className="flex justify-between text-sm mb-2.5">
-                      <span className="text-gray-600 font-medium flex items-center gap-1"><Clock className="w-3.5 h-3.5"/>過去24時間</span>
-                      <span className="text-gray-800 font-bold">{dmPacingData.sentLast24h} <span className="text-gray-400 font-normal">/ {dmPacingData.maxPer24h}件</span></span>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                      <div 
-                        className={`h-3 rounded-full transition-all duration-1000 ${
-                          (dmPacingData.sentLast24h / dmPacingData.maxPer24h) > 0.9 ? 'bg-red-500' :
-                          (dmPacingData.sentLast24h / dmPacingData.maxPer24h) > 0.7 ? 'bg-yellow-400' : 'bg-emerald-400'
-                        }`} 
-                        style={{ width: `${Math.min(100, (dmPacingData.sentLast24h / dmPacingData.maxPer24h) * 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                <span>クイックアクセス:</span>
+                <div className="flex items-center gap-2 font-medium">
+                  <Link href="/sales" className="hover:text-slate-800 transition-colors">営業モード</Link>
+                  <span>·</span>
+                  <Link href="/discover" className="hover:text-slate-800 transition-colors">店舗収集</Link>
+                  <span>·</span>
+                  <Link href="/leads" className="hover:text-slate-800 transition-colors">リード管理</Link>
                 </div>
               </div>
-
-              {/* Recent Activity Feed */}
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex-1 transition-all hover:shadow-md">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-emerald-500" />
-                    最近のアクティビティ
-                  </h2>
-                  <button className="text-sm text-emerald-600 font-semibold hover:text-emerald-700 transition-colors">すべて見る</button>
-                </div>
-                
-                <div className="space-y-0 divide-y divide-gray-100">
-                  {recentActivities.map((activity: any) => {
-                    const Icon = activity.icon || Activity;
-                    return (
-                      <div key={activity.id} className="py-4 first:pt-0 last:pb-0 flex items-start gap-4 hover:bg-gray-50 -mx-2 px-2 rounded-xl transition-colors">
-                        <div className={`p-2.5 rounded-xl ${activity.bgColor} shrink-0 mt-0.5`}>
-                          <Icon className={`w-4 h-4 ${activity.iconColor}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 leading-tight mb-1">{activity.text}</p>
-                          <p className="text-xs text-gray-500 font-medium">{activity.time}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
             </div>
           </div>
-        </>
-      )}
+
+          {/* Card 2: レシピ原価管理 (COST LAB) */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-8 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
+            <div>
+              {/* Card Header Icon & Badge */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                  <Calculator className="w-6 h-6" />
+                </div>
+                <span className="text-xs font-medium text-amber-800 bg-amber-50/80 px-2.5 py-1 rounded-md border border-amber-200/50">
+                  Cost Management
+                </span>
+              </div>
+
+              {/* Title & Description */}
+              <h2 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-amber-700 transition-colors">
+                レシピ原価管理 <span className="text-sm font-semibold text-slate-400 font-mono ml-1">COST LAB</span>
+              </h2>
+              <p className="text-xs text-slate-500 leading-relaxed mb-6">
+                原材料（g / ml）配合、共通資材代、直接入力の人件費から1個あたりの製造原価を精密計算。想定卸売価格・小売価格における粗利マージンをリアルタイムシミュレーション。
+              </p>
+
+              {/* Feature List */}
+              <div className="space-y-2.5 mb-8 border-t border-slate-100 pt-5">
+                <div className="flex items-center gap-2.5 text-xs text-slate-600">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                  <span>原材料・共通資材マスター（税込1g・1個単価自動算出）</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-600">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                  <span>米粉アイス 10種類の実配合・仕上がり総定数登録</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-600">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                  <span>卸価格リアルタイム試算 ＆ 原価構造積層チャート分析</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div>
+              <Link
+                href="/cost/recipes"
+                className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-all shadow-xs group-hover:bg-amber-600"
+              >
+                <span>レシピ原価管理を開く</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                <span>クイックアクセス:</span>
+                <div className="flex items-center gap-2 font-medium">
+                  <Link href="/cost/recipes" className="hover:text-slate-800 transition-colors">レシピ一覧</Link>
+                  <span>·</span>
+                  <Link href="/cost/materials" className="hover:text-slate-800 transition-colors">材料マスター</Link>
+                  <span>·</span>
+                  <Link href="/cost/summary" className="hover:text-slate-800 transition-colors">原価分析</Link>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </main>
+
+      {/* Clean Footer */}
+      <footer className="h-14 border-t border-slate-200/80 bg-white/60 px-8 flex items-center justify-between text-xs text-slate-400">
+        <div>
+          SoyStories Management Platform &copy; {new Date().getFullYear()}
+        </div>
+        <div className="flex items-center gap-4 text-[11px]">
+          <span>プラントベース クラフトアイス</span>
+          <span>·</span>
+          <span>B2B卸売＆原価管理基盤</span>
+        </div>
+      </footer>
     </div>
   );
 }
