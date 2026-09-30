@@ -19,20 +19,32 @@ import {
   Copy, 
   Sliders, 
   Package, 
-  Check
+  Check,
+  HelpCircle,
+  X,
+  ChevronsUpDown,
+  CheckCircle2,
+  PieChart
 } from 'lucide-react';
 import { Recipe, Material, RecipeCostBreakdown, PackageType } from '@/types/cost';
 import { getRecipes, getMaterials, calculateRecipeCost, deleteRecipe, saveRecipe } from '@/lib/cost-api';
+import TutorialModal from '@/components/cost/TutorialModal';
 
 export default function RecipesListPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedRecipeId, setExpandedRecipeId] = useState<string | null>(null);
+  
+  // Set of expanded recipe IDs for flexible accordion control
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   // Active Packaging Mode: 'cup' (個食カップ 120ml) or 'bulk' (業務用 2Lバルク)
   const [activePackageType, setActivePackageType] = useState<PackageType>('cup');
+
+  // Tutorial modal & quick guide visibility
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [showQuickGuide, setShowQuickGuide] = useState(true);
 
   // Price Simulation Overrides for interactive sandbox
   const [simulatedWholesale, setSimulatedWholesale] = useState<Record<string, number>>({});
@@ -50,10 +62,31 @@ export default function RecipesListPage() {
     setRecipes(recData);
     setMaterials(matData);
     
-    if (recData.length > 0 && !expandedRecipeId) {
-      setExpandedRecipeId(recData[0].id);
+    // By default, keep first recipe expanded so beginners immediately see detail
+    if (recData.length > 0 && expandedIds.size === 0) {
+      setExpandedIds(new Set([recData[0].id]));
     }
     setLoading(false);
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleExpandAll = () => {
+    if (expandedIds.size === recipes.length) {
+      setExpandedIds(new Set());
+    } else {
+      setExpandedIds(new Set(recipes.map(r => r.id)));
+    }
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -112,41 +145,114 @@ export default function RecipesListPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16 font-sans">
       
-      {/* Top Banner */}
+      {/* Top Banner with Tutorial Trigger */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
               米粉アイス 10フレーバー
             </span>
-            <span className="text-xs text-slate-400">形態別（カップ / バルク）原価・価格戦略</span>
+            <span className="text-xs text-slate-400">形態別（カップ ⇔ 2Lバルク）原価・価格戦略</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">レシピ一覧 & 製造原価管理</h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
             原材料配合は共通のまま、製造形態（カップ充填 ⇔ 2L業務用バルク）に応じた人件費・資材費・仕上がり本数ごとの原価と粗利を即座に試算します。
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 shrink-0">
+          {/* Tutorial Guide Trigger */}
+          <button
+            onClick={() => setIsTutorialOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/70 font-semibold text-xs transition-colors shadow-2xs cursor-pointer"
+          >
+            <HelpCircle className="w-4 h-4 text-amber-600" />
+            <span>使い方ガイド</span>
+          </button>
+
           <Link
-            href="/cost/materials"
+            href="/cost/summary"
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium text-xs transition-colors border border-slate-200/80"
           >
-            <Boxes className="w-4 h-4 text-slate-400" />
-            <span>材料・資材マスター ({materials.length})</span>
+            <PieChart className="w-4 h-4 text-slate-500" />
+            <span>原価サマリー</span>
           </Link>
+
           <Link
             href="/cost/recipes/new"
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-xs active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>レシピ新規作成</span>
+            <span>新規登録</span>
           </Link>
         </div>
       </div>
 
-      {/* Package Type Switcher (Google-style segmented control) & Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Beginner Quick Guide Banner (Dismissible) */}
+      {showQuickGuide && (
+        <div className="bg-gradient-to-r from-amber-50/80 via-white to-amber-50/40 p-4 sm:p-5 rounded-2xl border border-amber-200/80 shadow-2xs relative">
+          <button
+            onClick={() => setShowQuickGuide(false)}
+            className="absolute right-3.5 top-3.5 p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-amber-100/50 transition-colors"
+            title="ガイドを閉じる（ヘッダーの使い方ガイドからいつでも再表示できます）"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+
+          <div className="flex items-center gap-2 mb-3">
+            <span className="p-1 rounded-md bg-amber-500 text-white">
+              <Sparkles className="w-3.5 h-3.5" />
+            </span>
+            <span className="text-xs font-bold text-slate-900">
+              はじめての方へ：3ステップでわかる操作手順
+            </span>
+            <span className="text-[11px] text-slate-400 hidden sm:inline">
+              直感的に原価と粗利のシミュレーションが行えます
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="bg-white/90 p-3 rounded-xl border border-amber-100 flex items-start gap-2.5 shadow-2xs">
+              <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0">
+                1
+              </span>
+              <div className="text-xs">
+                <div className="font-semibold text-slate-800">カップ ⇔ 2Lバルクを切替</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">
+                  下のスイッチで、1個あたり（120ml）と2L角型容器1本あたりの原価を即座に再計算。
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/90 p-3 rounded-xl border border-amber-100 flex items-start gap-2.5 shadow-2xs">
+              <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0">
+                2
+              </span>
+              <div className="text-xs">
+                <div className="font-semibold text-slate-800">カードを開いて粗利試算</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">
+                  各カードの「内訳・試算」を開くと、価格スライダーで卸先への提案価格と粗利率を検証可能。
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/90 p-3 rounded-xl border border-amber-100 flex items-start gap-2.5 shadow-2xs">
+              <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0">
+                3
+              </span>
+              <div className="text-xs">
+                <div className="font-semibold text-slate-800">配合や資材を自由に変更</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">
+                  右上の「編集」から豆乳・ピューレ等のg配合や、仕込み個数、人件費をカスタマイズ。
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Package Type Switcher, Search, and Bulk Controls */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         
         {/* Segmented Control for Cup vs Bulk */}
         <div className="flex items-center p-1 bg-slate-100/90 rounded-xl border border-slate-200/80">
@@ -179,16 +285,42 @@ export default function RecipesListPage() {
           </button>
         </div>
 
-        {/* Search Input */}
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="フレーバー名・材料で検索..."
-            className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200/90 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 shadow-2xs"
-          />
+        {/* Right Controls: Search, Expand All, Count Badge */}
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+          {/* Search Input with Clear Button */}
+          <div className="relative w-full sm:w-64">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="フレーバー・材料で検索..."
+              className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200/90 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 shadow-2xs"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Expand/Collapse All Button */}
+          <button
+            onClick={handleExpandAll}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs border border-slate-200/90 shadow-2xs transition-colors shrink-0"
+            title="すべてのレシピカードの詳細を一括で開く / 閉じる"
+          >
+            <ChevronsUpDown className="w-3.5 h-3.5 text-slate-500" />
+            <span>{expandedIds.size === recipes.length ? 'すべて閉じる' : 'すべて開く'}</span>
+          </button>
+
+          {/* Recipe Count Badge */}
+          <div className="text-[11px] font-mono text-slate-500 px-2.5 py-1.5 rounded-lg bg-slate-100 shrink-0">
+            {filteredRecipes.length} / {recipes.length}件
+          </div>
         </div>
       </div>
 
@@ -273,7 +405,7 @@ export default function RecipesListPage() {
             const breakdown = recipeBreakdowns.get(recipe.id);
             if (!breakdown) return null;
 
-            const isExpanded = expandedRecipeId === recipe.id;
+            const isExpanded = expandedIds.has(recipe.id);
             const simKey = `${recipe.id}-${activePackageType}`;
             const currentSimWholesale = simulatedWholesale[simKey] !== undefined
               ? simulatedWholesale[simKey]
@@ -282,7 +414,9 @@ export default function RecipesListPage() {
             return (
               <div
                 key={recipe.id}
-                className="bg-white rounded-xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all overflow-hidden"
+                className={`bg-white rounded-xl border transition-all overflow-hidden ${
+                  isExpanded ? 'border-slate-300 shadow-xs' : 'border-slate-200/90 shadow-2xs hover:border-slate-300'
+                }`}
               >
                 {/* Main Card Summary Row */}
                 <div className="p-5">
@@ -294,7 +428,7 @@ export default function RecipesListPage() {
                         <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
                           isBulk ? 'bg-emerald-50 text-emerald-800 border border-emerald-200/60' : 'bg-amber-50 text-amber-800 border border-amber-200/60'
                         }`}>
-                          {isBulk ? '📦 2Lバルク' : '🍨 個食カップ'}
+                          {isBulk ? '📦 2L業務用バルク' : '🍨 個食カップ (120ml)'}
                         </span>
                         <span className="text-xs text-slate-400 font-mono">
                           仕上がり: <strong>{breakdown.target_quantity}{breakdown.unit_name}</strong> / 仕込み
@@ -350,14 +484,28 @@ export default function RecipesListPage() {
                         </div>
                         <div className="text-xs font-semibold text-emerald-700 flex items-center justify-end gap-1 mt-0.5 font-mono">
                           <span>粗利 ¥{Math.round(breakdown.wholesale.gross_margin).toLocaleString()}</span>
-                          <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-1 py-0.2 rounded">
+                          <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-1 py-0.2 rounded font-semibold">
                             {breakdown.wholesale.margin_ratio.toFixed(0)}%
                           </span>
                         </div>
                       </div>
 
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-1 pl-2 border-l border-slate-100">
+                      {/* Action buttons with Prominent Accordion Toggle */}
+                      <div className="flex items-center gap-1.5 pl-2 border-l border-slate-100">
+                        {/* Interactive Accordion Button with clear label */}
+                        <button
+                          onClick={() => toggleExpand(recipe.id)}
+                          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                            isExpanded 
+                              ? 'bg-slate-900 text-white shadow-xs' 
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+                          }`}
+                          title={isExpanded ? '詳細内訳・試算を閉じる' : '原材料配合・資材内訳・価格シミュレーターを開く'}
+                        >
+                          <span>{isExpanded ? '閉じる' : '内訳・試算'}</span>
+                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
+
                         <Link
                           href={`/cost/recipes/${recipe.id}`}
                           className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
@@ -378,15 +526,6 @@ export default function RecipesListPage() {
                           title="レシピを削除"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setExpandedRecipeId(isExpanded ? null : recipe.id)}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            isExpanded ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
-                          }`}
-                          title={isExpanded ? '詳細を閉じる' : '詳細を展開'}
-                        >
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
@@ -597,6 +736,12 @@ export default function RecipesListPage() {
           })
         )}
       </div>
+
+      {/* Tutorial Modal */}
+      <TutorialModal 
+        isOpen={isTutorialOpen} 
+        onClose={() => setIsTutorialOpen(false)} 
+      />
     </div>
   );
 }

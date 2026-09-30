@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Material, Recipe, RecipeIngredient, RecipePackaging, PackageType, PackageConfig } from '@/types/cost';
 import { calculateRecipeCost, saveRecipe, COMMON_CUP_PACKAGINGS, COMMON_BULK_PACKAGINGS } from '@/lib/cost-api';
+import TutorialModal from '@/components/cost/TutorialModal';
 
 interface RecipeEditorFormProps {
   initialRecipe?: Recipe;
@@ -35,6 +36,7 @@ export default function RecipeEditorForm({
 }: RecipeEditorFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
   // Active Tab for Package Configuration in Form: 'cup' | 'bulk'
   const [activePackageTab, setActivePackageTab] = useState<PackageType>('cup');
@@ -242,7 +244,8 @@ export default function RecipeEditorForm({
   const isBulk = activePackageTab === 'bulk';
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-7xl mx-auto pb-16 font-sans">
+    <>
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-7xl mx-auto pb-16 font-sans">
       
       {/* Top Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
@@ -266,7 +269,16 @@ export default function RecipeEditorForm({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setIsTutorialOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/70 font-semibold text-xs transition-colors shadow-2xs cursor-pointer"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
+            <span>使い方ガイド</span>
+          </button>
+
           <Link
             href="/cost/recipes"
             className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
@@ -276,11 +288,22 @@ export default function RecipeEditorForm({
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{saving ? '保存中...' : 'レシピを保存'}</span>
           </button>
+        </div>
+      </div>
+
+      {/* Beginner Guidance Box */}
+      <div className="bg-gradient-to-r from-amber-50/80 via-white to-amber-50/40 p-4 rounded-xl border border-amber-200/80 shadow-2xs flex items-start gap-3">
+        <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+          <Sparkles className="w-4 h-4" />
+        </div>
+        <div className="text-xs text-slate-700 leading-relaxed">
+          <strong className="text-amber-950 font-bold block mb-0.5">配合と形態設定のポイント：</strong>
+          「2. 原材料配合」で豆乳・ピューレ等のg配合を入力すれば、個食カップ（65個）と業務用2Lバルク（3本）の両方に共通反映されます。「3. 形態別設定」のタブで、それぞれの仕上がり数・資材・人件費・想定卸売価格を個別に調整可能です。
         </div>
       </div>
 
@@ -847,5 +870,12 @@ export default function RecipeEditorForm({
 
       </div>
     </form>
+
+    {/* Tutorial Modal */}
+    <TutorialModal
+      isOpen={isTutorialOpen}
+      onClose={() => setIsTutorialOpen(false)}
+    />
+  </>
   );
 }

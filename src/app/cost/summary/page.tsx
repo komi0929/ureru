@@ -16,16 +16,22 @@ import {
   Calculator, 
   TrendingUp, 
   PieChart, 
-  Boxes
+  Boxes,
+  HelpCircle,
+  Sparkles,
+  ArrowLeft,
+  Info
 } from 'lucide-react';
 import { Recipe, Material, RecipeCostBreakdown, PackageType } from '@/types/cost';
 import { getRecipes, getMaterials, calculateRecipeCost } from '@/lib/cost-api';
+import TutorialModal from '@/components/cost/TutorialModal';
 
 export default function CostSummaryPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [activePackageType, setActivePackageType] = useState<PackageType>('cup');
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -94,7 +100,15 @@ export default function CostSummaryPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsTutorialOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/70 font-semibold text-xs transition-colors shadow-2xs cursor-pointer"
+          >
+            <HelpCircle className="w-4 h-4 text-amber-600" />
+            <span>使い方ガイド</span>
+          </button>
+
           <Link
             href="/cost/recipes"
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition-colors border border-slate-200/80"
@@ -318,6 +332,12 @@ export default function CostSummaryPage() {
           </table>
         </div>
       </div>
+
+      {/* Tutorial Modal */}
+      <TutorialModal
+        isOpen={isTutorialOpen}
+        onClose={() => setIsTutorialOpen(false)}
+      />
     </div>
   );
 }

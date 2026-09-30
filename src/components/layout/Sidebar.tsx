@@ -50,7 +50,7 @@ export default function Sidebar() {
           <span>TOPポータルに戻る</span>
         </Link>
         <Link
-          href="/cost"
+          href="/cost/recipes"
           className="flex items-center justify-between px-2.5 py-2 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200/60"
         >
           <span className="flex items-center gap-2">

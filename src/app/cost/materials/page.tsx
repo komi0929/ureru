@@ -19,12 +19,14 @@ import {
 } from 'lucide-react';
 import { Material, MaterialCategory, UnitType } from '@/types/cost';
 import { getMaterials, saveMaterial, deleteMaterial } from '@/lib/cost-api';
+import TutorialModal from '@/components/cost/TutorialModal';
 
 export default function MaterialsMasterPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'ingredient' | 'packaging'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   
   // Modal / Form state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -165,7 +167,15 @@ export default function MaterialsMasterPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsTutorialOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/70 font-semibold text-xs transition-colors shadow-2xs cursor-pointer"
+          >
+            <HelpCircle className="w-4 h-4 text-amber-600" />
+            <span>使い方ガイド</span>
+          </button>
+
           <button
             onClick={() => handleOpenAddModal('ingredient')}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-all shadow-xs active:scale-95 cursor-pointer"
@@ -594,6 +604,12 @@ export default function MaterialsMasterPage() {
           </div>
         </div>
       )}
+
+      {/* Tutorial Modal */}
+      <TutorialModal
+        isOpen={isTutorialOpen}
+        onClose={() => setIsTutorialOpen(false)}
+      />
     </div>
   );
 }
