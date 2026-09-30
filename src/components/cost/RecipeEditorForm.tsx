@@ -19,8 +19,8 @@ import {
   Sparkles,
   ExternalLink
 } from 'lucide-react';
-import { Material, Recipe, RecipeIngredient, RecipePackaging } from '@/types/cost';
-import { calculateRecipeCost, saveRecipe } from '@/lib/cost-api';
+import { Material, Recipe, RecipeIngredient, RecipePackaging, PackageType, PackageConfig } from '@/types/cost';
+import { calculateRecipeCost, saveRecipe, COMMON_CUP_PACKAGINGS, COMMON_BULK_PACKAGINGS } from '@/lib/cost-api';
 
 interface RecipeEditorFormProps {
   initialRecipe?: Recipe;
@@ -36,28 +36,54 @@ export default function RecipeEditorForm({
   const router = useRouter();
   const [saving, setSaving] = useState(false);
 
-  // Form States
+  // Active Tab for Package Configuration in Form: 'cup' | 'bulk'
+  const [activePackageTab, setActivePackageTab] = useState<PackageType>('cup');
+
+  // Basic Info States
   const [name, setName] = useState(initialRecipe?.name || '');
   const [category, setCategory] = useState(initialRecipe?.category || '米粉アイス');
   const [description, setDescription] = useState(initialRecipe?.description || '');
-  const [targetQuantity, setTargetQuantity] = useState<number>(initialRecipe?.target_quantity || 65);
-  const [laborCost, setLaborCost] = useState<number>(initialRecipe?.labor_cost ?? 3000);
-  const [targetRetailPrice, setTargetRetailPrice] = useState<number>(initialRecipe?.target_retail_price ?? 500);
-  const [targetWholesalePrice, setTargetWholesalePrice] = useState<number>(initialRecipe?.target_wholesale_price ?? 340);
   const [notes, setNotes] = useState(initialRecipe?.notes || '');
 
-  // Ingredients state
+  // Ingredients (Shared across Cup & Bulk)
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>(
     initialRecipe?.ingredients || [
       { id: 'ing-1', material_id: materials.find(m => m.category === 'ingredient')?.id || '', amount: 1000, unit: 'ml' }
     ]
   );
 
-  // Packagings state
-  const [packagings, setPackagings] = useState<RecipePackaging[]>(
-    initialRecipe?.packagings || [
-      { id: 'pkg-1', material_id: materials.find(m => m.category === 'packaging')?.id || '', quantity_per_unit: 1 }
-    ]
+  // Cup Configuration
+  const [cupQuantity, setCupQuantity] = useState<number>(
+    initialRecipe?.cup_config?.target_quantity || initialRecipe?.target_quantity || 65
+  );
+  const [cupLaborCost, setCupLaborCost] = useState<number>(
+    initialRecipe?.cup_config?.labor_cost ?? initialRecipe?.labor_cost ?? 3000
+  );
+  const [cupWholesalePrice, setCupWholesalePrice] = useState<number>(
+    initialRecipe?.cup_config?.target_wholesale_price ?? initialRecipe?.target_wholesale_price ?? 340
+  );
+  const [cupRetailPrice, setCupRetailPrice] = useState<number>(
+    initialRecipe?.cup_config?.target_retail_price ?? initialRecipe?.target_retail_price ?? 520
+  );
+  const [cupPackagings, setCupPackagings] = useState<RecipePackaging[]>(
+    initialRecipe?.cup_config?.packagings || initialRecipe?.packagings || [...COMMON_CUP_PACKAGINGS]
+  );
+
+  // Bulk Configuration (2L業務用)
+  const [bulkQuantity, setBulkQuantity] = useState<number>(
+    initialRecipe?.bulk_config?.target_quantity || 3
+  );
+  const [bulkLaborCost, setBulkLaborCost] = useState<number>(
+    initialRecipe?.bulk_config?.labor_cost ?? 3600
+  );
+  const [bulkWholesalePrice, setBulkWholesalePrice] = useState<number>(
+    initialRecipe?.bulk_config?.target_wholesale_price ?? 4320
+  );
+  const [bulkRetailPrice, setBulkRetailPrice] = useState<number>(
+    initialRecipe?.bulk_config?.target_retail_price ?? 6000
+  );
+  const [bulkPackagings, setBulkPackagings] = useState<RecipePackaging[]>(
+    initialRecipe?.bulk_config?.packagings || [...COMMON_BULK_PACKAGINGS]
   );
 
   // Materials split
@@ -70,19 +96,37 @@ export default function RecipeEditorForm({
     name: name || '名称未設定レシピ',
     category,
     description,
-    target_quantity: Number(targetQuantity) > 0 ? Number(targetQuantity) : 1,
-    labor_cost: Number(laborCost || 0),
-    target_retail_price: Number(targetRetailPrice || 0),
-    target_wholesale_price: Number(targetWholesalePrice || 0),
     ingredients,
-    packagings,
+    cup_config: {
+      package_type: 'cup',
+      unit_name: '個',
+      target_quantity: Number(cupQuantity) > 0 ? Number(cupQuantity) : 1,
+      labor_cost: Number(cupLaborCost || 0),
+      target_wholesale_price: Number(cupWholesalePrice || 0),
+      target_retail_price: Number(cupRetailPrice || 0),
+      packagings: cupPackagings,
+    },
+    bulk_config: {
+      package_type: 'bulk',
+      unit_name: '本 (2L)',
+      target_quantity: Number(bulkQuantity) > 0 ? Number(bulkQuantity) : 1,
+      labor_cost: Number(bulkLaborCost || 0),
+      target_wholesale_price: Number(bulkWholesalePrice || 0),
+      target_retail_price: Number(bulkRetailPrice || 0),
+      packagings: bulkPackagings,
+    },
     notes,
-  }), [name, category, description, targetQuantity, laborCost, targetRetailPrice, targetWholesalePrice, ingredients, packagings, notes, initialRecipe]);
+  }), [
+    name, category, description, ingredients, 
+    cupQuantity, cupLaborCost, cupWholesalePrice, cupRetailPrice, cupPackagings,
+    bulkQuantity, bulkLaborCost, bulkWholesalePrice, bulkRetailPrice, bulkPackagings,
+    notes, initialRecipe
+  ]);
 
-  // Real-time calculation
+  // Real-time calculation for active package tab
   const calculation = useMemo(() => {
-    return calculateRecipeCost(currentRecipe, materials);
-  }, [currentRecipe, materials]);
+    return calculateRecipeCost(currentRecipe, materials, activePackageTab);
+  }, [currentRecipe, materials, activePackageTab]);
 
   // Ingredient Handlers
   const handleAddIngredient = () => {
@@ -118,10 +162,13 @@ export default function RecipeEditorForm({
     setIngredients(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Packaging Handlers
+  // Packaging Handlers (for current tab)
+  const currentPackagings = activePackageTab === 'bulk' ? bulkPackagings : cupPackagings;
+  const setCurrentPackagings = activePackageTab === 'bulk' ? setBulkPackagings : setCupPackagings;
+
   const handleAddPackaging = () => {
     const defaultPkg = packagingMasters[0]?.id || '';
-    setPackagings(prev => [
+    setCurrentPackagings(prev => [
       ...prev,
       {
         id: `pkg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -132,7 +179,7 @@ export default function RecipeEditorForm({
   };
 
   const handleUpdatePackaging = (index: number, field: keyof RecipePackaging, value: any) => {
-    setPackagings(prev => {
+    setCurrentPackagings(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
       return updated;
@@ -140,18 +187,18 @@ export default function RecipeEditorForm({
   };
 
   const handleRemovePackaging = (index: number) => {
-    setPackagings(prev => prev.filter((_, i) => i !== index));
+    setCurrentPackagings(prev => prev.filter((_, i) => i !== index));
   };
 
   // Form Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert('レシピ名・商品名を入力してください');
+      alert('レシピ名を入力してください');
       return;
     }
-    if (targetQuantity <= 0) {
-      alert('仕上がり総定数は1以上を入力してください');
+    if (cupQuantity <= 0 || bulkQuantity <= 0) {
+      alert('仕上がり数量は1以上を入力してください');
       return;
     }
 
@@ -162,12 +209,25 @@ export default function RecipeEditorForm({
         name: name.trim(),
         category,
         description: description.trim(),
-        target_quantity: Number(targetQuantity),
-        labor_cost: Number(laborCost || 0),
-        target_retail_price: Number(targetRetailPrice || 0),
-        target_wholesale_price: Number(targetWholesalePrice || 0),
         ingredients,
-        packagings,
+        cup_config: {
+          package_type: 'cup',
+          unit_name: '個',
+          target_quantity: Number(cupQuantity),
+          labor_cost: Number(cupLaborCost || 0),
+          target_wholesale_price: Number(cupWholesalePrice || 0),
+          target_retail_price: Number(cupRetailPrice || 0),
+          packagings: cupPackagings,
+        },
+        bulk_config: {
+          package_type: 'bulk',
+          unit_name: '本 (2L)',
+          target_quantity: Number(bulkQuantity),
+          labor_cost: Number(bulkLaborCost || 0),
+          target_wholesale_price: Number(bulkWholesalePrice || 0),
+          target_retail_price: Number(bulkRetailPrice || 0),
+          packagings: bulkPackagings,
+        },
         notes: notes.trim(),
       });
       router.push('/cost/recipes');
@@ -178,6 +238,8 @@ export default function RecipeEditorForm({
       setSaving(false);
     }
   };
+
+  const isBulk = activePackageTab === 'bulk';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-7xl mx-auto pb-16 font-sans">
@@ -196,7 +258,7 @@ export default function RecipeEditorForm({
               <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700">
                 {isEditing ? 'レシピ編集' : '新規レシピ作成'}
               </span>
-              <span className="text-xs text-slate-400 font-mono">1仕込み総定数: {targetQuantity}個</span>
+              <span className="text-xs text-slate-400">カップ（65個）＆ 2Lバルク（3本）同時管理</span>
             </div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
               {name || '新規レシピ配合'}
@@ -232,13 +294,13 @@ export default function RecipeEditorForm({
           <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
             <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center text-[11px] font-bold">1</span>
-              基本情報 & 仕上がり総定数
+              基本情報
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-xs font-medium text-slate-700 mb-1">
-                  レシピ・商品名 * <span className="text-slate-400 font-normal">(例: 米粉アイス【アールグレイ】)</span>
+                  レシピ・フレーバー名 * <span className="text-slate-400 font-normal">(例: 米粉アイス【アールグレイ】)</span>
                 </label>
                 <input
                   type="text"
@@ -264,49 +326,30 @@ export default function RecipeEditorForm({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-              <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/80">
-                <label className="block text-xs font-semibold text-slate-800 mb-1">
-                  仕上がり総定数 (1仕込みの製造個数) *
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={targetQuantity}
-                    onChange={(e) => setTargetQuantity(Number(e.target.value))}
-                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-base font-bold text-slate-900 font-mono pr-12 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
-                  />
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">
-                    個
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  ※材料費や人件費をこの個数で割り、1個あたり単価を算出します
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">商品特徴・メモ</label>
-                <textarea
-                  rows={2}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="九州産有機大豆豆乳使用、風味の特長など"
-                  className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">商品説明・特徴メモ</label>
+              <textarea
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="有機豆乳と米粉のなめらかさ、アールグレイの香り立ち等"
+                className="w-full px-3.5 py-2 bg-slate-50/50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+              />
             </div>
           </div>
 
-          {/* 2. 材料配合 */}
+          {/* 2. 原材料配合 (全形態共通) */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center text-[11px] font-bold">2</span>
-                材料配合（何が何g / ml 入るか）
-              </h2>
+              <div>
+                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center text-[11px] font-bold">2</span>
+                  原材料配合（何が何g / ml 入るか）
+                </h2>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  ※原材料はカップ・バルク共通です（1回の仕込みで計量する総量）
+                </p>
+              </div>
               <div className="flex items-center gap-3">
                 <Link
                   href="/cost/materials"
@@ -334,14 +377,12 @@ export default function RecipeEditorForm({
                 const mat = materials.find(m => m.id === item.material_id);
                 const unitCost = mat?.unit_cost || 0;
                 const rowCost = item.amount * unitCost;
-                const costPerUnit = rowCost / (targetQuantity > 0 ? targetQuantity : 1);
 
                 return (
                   <div
                     key={item.id || index}
                     className="flex flex-col md:flex-row md:items-center gap-3 p-3 rounded-xl bg-slate-50/60 border border-slate-200/80 hover:border-slate-300 transition-all text-xs"
                   >
-                    {/* Material Select */}
                     <div className="flex-1">
                       <label className="block text-[10px] font-medium text-slate-500 mb-0.5">
                         使用材料 #{index + 1}
@@ -360,7 +401,6 @@ export default function RecipeEditorForm({
                       </select>
                     </div>
 
-                    {/* Amount & Unit */}
                     <div className="w-full md:w-36">
                       <label className="block text-[10px] font-medium text-slate-500 mb-0.5">
                         配合量 (1仕込み)
@@ -380,18 +420,13 @@ export default function RecipeEditorForm({
                       </div>
                     </div>
 
-                    {/* Cost Preview */}
-                    <div className="w-full md:w-44 text-right bg-white p-2 rounded-lg border border-slate-100 flex md:flex-col justify-between items-center md:items-end">
+                    <div className="w-full md:w-40 text-right bg-white p-2 rounded-lg border border-slate-100 flex md:flex-col justify-between items-center md:items-end">
                       <div className="text-[10px] text-slate-400">小計 (1仕込み)</div>
                       <div className="font-mono font-semibold text-slate-900">
                         ¥{Math.round(rowCost).toLocaleString()}
-                        <span className="text-[10px] text-slate-400 font-normal ml-1">
-                          (¥{costPerUnit.toFixed(1)}/個)
-                        </span>
                       </div>
                     </div>
 
-                    {/* Delete Button */}
                     <button
                       type="button"
                       onClick={() => handleRemoveIngredient(index)}
@@ -405,177 +440,249 @@ export default function RecipeEditorForm({
               })}
             </div>
 
-            {/* Ingredient Subtotal Card */}
+            {/* Total Ingredient Cost Card */}
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-slate-800">🥣 材料費 小計</span>
+                <span className="text-xs font-semibold text-slate-800">🥣 原材料費 小計 (1仕込み)</span>
                 <div className="text-[11px] text-slate-500">
-                  使用材料 {ingredients.length}品目
+                  配合材料 {ingredients.length}品目
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-xs text-slate-600">
-                  1仕込み合計: <strong className="font-mono text-slate-900">¥{Math.round(calculation.total_ingredient_cost).toLocaleString()}</strong>
-                </div>
-                <div className="text-sm font-bold text-slate-900 font-mono">
-                  ¥{calculation.unit_ingredient_cost.toFixed(1)}
-                  <span className="text-xs font-normal text-slate-500 ml-1">/ 1個あたり</span>
+                <div className="text-base font-bold text-slate-900 font-mono">
+                  ¥{Math.round(calculation.total_ingredient_cost).toLocaleString()}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 3. 資材代 */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center text-[11px] font-bold">3</span>
-                資材代（1個あたりに使用するカップ・包材）
-              </h2>
-              <button
-                type="button"
-                onClick={handleAddPackaging}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs transition-colors cursor-pointer"
-              >
-                <Plus className="w-3 h-3" />
-                <span>資材を追加</span>
-              </button>
-            </div>
-
-            {/* Packaging Rows */}
-            <div className="space-y-2">
-              {packagings.map((item, index) => {
-                const mat = materials.find(m => m.id === item.material_id);
-                const unitCost = mat?.unit_cost || 0;
-                const costPerUnit = item.quantity_per_unit * unitCost;
-
-                return (
-                  <div
-                    key={item.id || index}
-                    className="flex flex-col md:flex-row md:items-center gap-3 p-3 rounded-xl bg-slate-50/60 border border-slate-200/80 hover:border-slate-300 transition-all text-xs"
-                  >
-                    <div className="flex-1">
-                      <label className="block text-[10px] font-medium text-slate-500 mb-0.5">
-                        資材名 #{index + 1}
-                      </label>
-                      <select
-                        value={item.material_id}
-                        onChange={(e) => handleUpdatePackaging(index, 'material_id', e.target.value)}
-                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
-                      >
-                        <option value="">-- 資材を選択 --</option>
-                        {packagingMasters.map(m => (
-                          <option key={m.id} value={m.id}>
-                            {m.name} (¥{m.unit_cost.toFixed(1)}/個)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="w-full md:w-36">
-                      <label className="block text-[10px] font-medium text-slate-500 mb-0.5">
-                        1個あたり使用数
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min={0}
-                          step={1}
-                          value={item.quantity_per_unit}
-                          onChange={(e) => handleUpdatePackaging(index, 'quantity_per_unit', Number(e.target.value))}
-                          className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono font-bold pr-10 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
-                        />
-                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-xs">
-                          個
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="w-full md:w-44 text-right bg-white p-2 rounded-lg border border-slate-100 flex md:flex-col justify-between items-center md:items-end">
-                      <div className="text-[10px] text-slate-400">1製品あたり資材費</div>
-                      <div className="font-mono font-semibold text-slate-900">
-                        ¥{costPerUnit.toFixed(1)}
-                        <span className="text-[10px] text-slate-400 font-normal ml-1">
-                          (仕込み: ¥{Math.round(costPerUnit * targetQuantity).toLocaleString()})
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleRemovePackaging(index)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors self-end md:self-center"
-                      title="この資材を削除"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Packaging Subtotal Card */}
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+          {/* 3. 形態別（カップ / バルク）製造設定 */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
-                <span className="text-xs font-semibold text-slate-800">📦 資材費 小計</span>
-                <div className="text-[11px] text-slate-500">
-                  資材 {packagings.length}種類
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-slate-600">
-                  1仕込み合計: <strong className="font-mono text-slate-900">¥{Math.round(calculation.total_packaging_cost).toLocaleString()}</strong>
-                </div>
-                <div className="text-sm font-bold text-slate-900 font-mono">
-                  ¥{calculation.unit_packaging_cost.toFixed(1)}
-                  <span className="text-xs font-normal text-slate-500 ml-1">/ 1個あたり</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 4. 人件費 */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
-            <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-3">
-              <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center text-[11px] font-bold">4</span>
-              人件費（1仕込みあたり直接入力）
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/80">
-                <label className="block text-xs font-semibold text-slate-800 mb-1">
-                  1仕込みの人件費 (直接入力) *
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 font-mono">¥</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={laborCost}
-                    onChange={(e) => setLaborCost(Number(e.target.value))}
-                    placeholder="3000"
-                    className="w-full pl-8 pr-3.5 py-2 bg-white border border-slate-200 rounded-lg text-base font-bold text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
-                  />
-                </div>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  ※製造スタッフの作業工数に見合った人件費総額
+                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center text-[11px] font-bold">3</span>
+                  形態別（カップ / バルク）製造・資材・人件費設定
+                </h2>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  タブを切り替えてそれぞれの仕上がり数・資材・人件費・卸価格を編集できます
                 </p>
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-center">
-                <div className="text-xs font-medium text-slate-500 mb-1">1個あたり人件費 (自動算出)</div>
-                <div className="text-xl font-bold text-slate-900 font-mono">
-                  ¥{calculation.unit_labor_cost.toFixed(1)}
-                  <span className="text-xs font-normal text-slate-500 ml-1">/ 1個</span>
+              {/* Tab Selector */}
+              <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/80">
+                <button
+                  type="button"
+                  onClick={() => setActivePackageTab('cup')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    !isBulk
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  🍨 個食カップ設定 (120ml)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePackageTab('bulk')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    isBulk
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  📦 業務用 2Lバルク設定
+                </button>
+              </div>
+            </div>
+
+            {/* Tab Content: Current Package Config Form */}
+            <div className="space-y-4">
+              
+              {/* Quantities & Labor Cost Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Target Quantity */}
+                <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/80">
+                  <label className="block text-xs font-semibold text-slate-800 mb-1">
+                    仕上がり総定数 (1仕込みで作れる{isBulk ? '本数' : '個数'}) *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={isBulk ? bulkQuantity : cupQuantity}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        if (isBulk) setBulkQuantity(val);
+                        else setCupQuantity(val);
+                      }}
+                      className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-base font-bold text-slate-900 font-mono pr-16 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">
+                      {isBulk ? '本 (2L)' : '個'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    {isBulk ? '※2L容器 × 3本 ＝ 6リットル' : '※120mlカップ × 65個'}
+                  </p>
                 </div>
-                <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
-                  ¥{Number(laborCost).toLocaleString()} ÷ {targetQuantity}個
+
+                {/* Labor Cost */}
+                <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/80">
+                  <label className="block text-xs font-semibold text-slate-800 mb-1">
+                    1仕込みの人件費 (直接入力) *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">¥</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={isBulk ? bulkLaborCost : cupLaborCost}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        if (isBulk) setBulkLaborCost(val);
+                        else setCupLaborCost(val);
+                      }}
+                      className="w-full pl-7 pr-3.5 py-2 bg-white border border-slate-200 rounded-lg text-base font-bold text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    {isBulk ? '※大容量バルク流し込み人件費' : '※カップ小分け充填・シーリング人件費'}
+                  </p>
                 </div>
               </div>
+
+              {/* Packaging Assignment for Current Tab */}
+              <div className="border border-slate-200/80 rounded-xl p-4 bg-white space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="font-semibold text-slate-800 text-xs flex items-center gap-1.5">
+                    📦 {isBulk ? '2Lバルク用資材' : 'カップ用資材'} ({currentPackagings.length}品目)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddPackaging}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>資材を追加</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {currentPackagings.map((item, index) => {
+                    const mat = materials.find(m => m.id === item.material_id);
+                    const unitCost = mat?.unit_cost || 0;
+                    const costPerUnit = item.quantity_per_unit * unitCost;
+
+                    return (
+                      <div
+                        key={item.id || index}
+                        className="flex flex-col md:flex-row md:items-center gap-3 p-2.5 rounded-lg bg-slate-50/60 border border-slate-200/80 text-xs"
+                      >
+                        <div className="flex-1">
+                          <select
+                            value={item.material_id}
+                            onChange={(e) => handleUpdatePackaging(index, 'material_id', e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs font-medium focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                          >
+                            <option value="">-- 資材を選択 --</option>
+                            {packagingMasters.map(m => (
+                              <option key={m.id} value={m.id}>
+                                {m.name} (¥{m.unit_cost.toFixed(1)}/個)
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="w-full md:w-32">
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min={0}
+                              step={1}
+                              value={item.quantity_per_unit}
+                              onChange={(e) => handleUpdatePackaging(index, 'quantity_per_unit', Number(e.target.value))}
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs font-mono font-bold pr-8 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-[11px]">
+                              個
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="w-full md:w-32 text-right font-mono font-semibold text-slate-800">
+                          ¥{costPerUnit.toFixed(1)} / {isBulk ? '本' : '個'}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePackaging(index)}
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors self-end md:self-center"
+                          title="削除"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <span className="text-slate-500">1{isBulk ? '本' : '個'}あたり資材費合計:</span>
+                  <span className="font-mono font-bold text-slate-900">
+                    ¥{calculation.unit_packaging_cost.toFixed(1)} / {isBulk ? '本 (2L)' : '個'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Wholesale / Retail Price Row for Current Tab */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    {isBulk ? '2Lバルク 想定卸売価格 (税込)' : 'カップ 想定卸売価格 (税込)'} *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">¥</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={isBulk ? bulkWholesalePrice : cupWholesalePrice}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        if (isBulk) setBulkWholesalePrice(val);
+                        else setCupWholesalePrice(val);
+                      }}
+                      className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    {isBulk ? '2Lバルク 想定小売価格 (参考)' : 'カップ 想定小売価格 (店頭)'}
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">¥</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={isBulk ? bulkRetailPrice : cupRetailPrice}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        if (isBulk) setBulkRetailPrice(val);
+                        else setCupRetailPrice(val);
+                      }}
+                      className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
 
-          {/* 5. 備考・製法メモ */}
+          {/* 4. 製法メモ */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2">
             <label className="block text-xs font-semibold text-slate-800">
               製造工程メモ・注意事項
@@ -584,7 +691,7 @@ export default function RecipeEditorForm({
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="フリージング温度設定、急速冷凍時間、アレルゲン配慮メモなど"
+              placeholder="フリージング温度設定、急速冷凍時間、α化手順など"
               className="w-full px-3.5 py-2 bg-slate-50/50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
             />
           </div>
@@ -594,22 +701,37 @@ export default function RecipeEditorForm({
         {/* Right Column (1 col): Clean White Summary Card */}
         <div className="lg:col-span-1 space-y-5 lg:sticky lg:top-24">
           
-          {/* Main Manufacturing Cost Card (Clean White) */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-5">
+          {/* Main Manufacturing Cost Card */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
+            
+            {/* Package Type Switcher for Preview */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <span className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                 <Calculator className="w-3.5 h-3.5 text-slate-500" />
                 製造原価 算出結果
               </span>
-              <span className="text-[11px] text-slate-400 font-mono">
-                総定数 {targetQuantity}個
-              </span>
+              <div className="flex p-0.5 bg-slate-100 rounded-lg text-[10px] font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setActivePackageTab('cup')}
+                  className={`px-2 py-0.5 rounded ${!isBulk ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'}`}
+                >
+                  カップ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePackageTab('bulk')}
+                  className={`px-2 py-0.5 rounded ${isBulk ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'}`}
+                >
+                  2Lバルク
+                </button>
+              </div>
             </div>
 
-            {/* Highlight: 1個あたり製造原価 */}
+            {/* Highlight */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
               <div className="text-xs text-slate-500 font-medium mb-1">
-                1個あたりの製造原価
+                {isBulk ? '2Lバルク 1本 製造原価' : 'カップ 1個 製造原価'}
               </div>
               <div className="text-3xl font-extrabold text-slate-900 font-mono tracking-tight">
                 ¥{Math.round(calculation.unit_manufacturing_cost).toLocaleString()}
@@ -618,7 +740,7 @@ export default function RecipeEditorForm({
                 </span>
               </div>
               <div className="text-[10px] text-slate-400 mt-1">
-                材料費 ＋ 資材代 ＋ 人件費
+                仕上がり総数: {calculation.target_quantity}{calculation.unit_name} / 仕込み
               </div>
             </div>
 
@@ -630,7 +752,7 @@ export default function RecipeEditorForm({
                   材料費
                 </span>
                 <div className="font-mono text-right">
-                  <span className="font-semibold text-slate-900">¥{calculation.unit_ingredient_cost.toFixed(1)}</span>
+                  <span className="font-semibold text-slate-900">¥{Math.round(calculation.unit_ingredient_cost).toLocaleString()}</span>
                   <span className="text-[10px] text-slate-400 ml-1.5">({calculation.ingredient_ratio.toFixed(0)}%)</span>
                 </div>
               </div>
@@ -638,10 +760,10 @@ export default function RecipeEditorForm({
               <div className="flex items-center justify-between py-1 border-b border-slate-100">
                 <span className="flex items-center gap-2 text-slate-600">
                   <span className="w-2 h-2 rounded-full bg-slate-400"></span>
-                  資材費 (カップ等)
+                  {isBulk ? 'バルク容器代' : '資材費'}
                 </span>
                 <div className="font-mono text-right">
-                  <span className="font-semibold text-slate-900">¥{calculation.unit_packaging_cost.toFixed(1)}</span>
+                  <span className="font-semibold text-slate-900">¥{Math.round(calculation.unit_packaging_cost).toLocaleString()}</span>
                   <span className="text-[10px] text-slate-400 ml-1.5">({calculation.packaging_ratio.toFixed(0)}%)</span>
                 </div>
               </div>
@@ -652,13 +774,13 @@ export default function RecipeEditorForm({
                   人件費
                 </span>
                 <div className="font-mono text-right">
-                  <span className="font-semibold text-slate-900">¥{calculation.unit_labor_cost.toFixed(1)}</span>
+                  <span className="font-semibold text-slate-900">¥{Math.round(calculation.unit_labor_cost).toLocaleString()}</span>
                   <span className="text-[10px] text-slate-400 ml-1.5">({calculation.labor_ratio.toFixed(0)}%)</span>
                 </div>
               </div>
 
               <div className="pt-2 flex items-center justify-between text-slate-500 text-[11px]">
-                <span>1仕込み総原価:</span>
+                <span>1仕込み総製造原価:</span>
                 <span className="font-mono font-bold text-slate-900">
                   ¥{Math.round(calculation.total_manufacturing_cost).toLocaleString()}
                 </span>
@@ -689,74 +811,23 @@ export default function RecipeEditorForm({
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <TrendingUp className="w-3.5 h-3.5 text-slate-600" />
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                価格＆粗利益シミュレーション
+                {isBulk ? '2Lバルク 粗利益分析' : 'カップ 粗利益分析'}
               </h3>
             </div>
 
-            {/* Wholesale */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-700">🏪 想定卸売価格</span>
-                <span className="text-[10px] text-slate-400">B2B店舗向け</span>
-              </div>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">¥</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={targetWholesalePrice}
-                  onChange={(e) => setTargetWholesalePrice(Number(e.target.value))}
-                  className="w-full pl-7 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
-                />
-              </div>
-
-              <div className="pt-1 grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                  <div className="text-[10px] text-slate-400">卸 原価率</div>
-                  <div className={`text-sm font-bold font-mono ${
-                    calculation.wholesale.cost_ratio > 60 ? 'text-rose-600' : 'text-emerald-700'
-                  }`}>
-                    {calculation.wholesale.cost_ratio.toFixed(1)}%
-                  </div>
-                </div>
-                <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                  <div className="text-[10px] text-slate-400">1個あたり粗利</div>
-                  <div className="text-sm font-bold text-slate-900 font-mono">
-                    ¥{Math.round(calculation.wholesale.gross_margin)}
-                  </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                <div className="text-[10px] text-slate-400">卸 原価率</div>
+                <div className={`text-base font-bold font-mono ${
+                  calculation.wholesale.cost_ratio > 60 ? 'text-rose-600' : 'text-emerald-700'
+                }`}>
+                  {calculation.wholesale.cost_ratio.toFixed(1)}%
                 </div>
               </div>
-            </div>
-
-            {/* Retail */}
-            <div className="space-y-1.5 pt-2 border-t border-slate-100">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-700">🛒 想定小売価格</span>
-                <span className="text-[10px] text-slate-400">店頭販売向け</span>
-              </div>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">¥</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={targetRetailPrice}
-                  onChange={(e) => setTargetRetailPrice(Number(e.target.value))}
-                  className="w-full pl-7 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
-                />
-              </div>
-
-              <div className="pt-1 grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                  <div className="text-[10px] text-slate-400">小売 原価率</div>
-                  <div className="text-sm font-bold font-mono text-slate-900">
-                    {calculation.retail.cost_ratio.toFixed(1)}%
-                  </div>
-                </div>
-                <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                  <div className="text-[10px] text-slate-400">1個あたり粗利</div>
-                  <div className="text-sm font-bold text-slate-900 font-mono">
-                    ¥{Math.round(calculation.retail.gross_margin)}
-                  </div>
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                <div className="text-[10px] text-slate-400">1{calculation.unit_name}あたり粗利</div>
+                <div className="text-base font-bold text-slate-900 font-mono">
+                  ¥{Math.round(calculation.wholesale.gross_margin).toLocaleString()}
                 </div>
               </div>
             </div>

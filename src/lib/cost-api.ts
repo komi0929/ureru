@@ -1,12 +1,12 @@
-import { Material, Recipe, RecipeCostBreakdown } from '@/types/cost';
+import { Material, Recipe, RecipeCostBreakdown, PackageType, PackageConfig } from '@/types/cost';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 // ============================================================
-// 本番用 初期マスターデータ（SoyStories 米粉アイス 10種 専用）
+// 本番用 初期マスターデータ（原材料 29種 ＋ 資材 8種）
 // ============================================================
 
 export const INITIAL_MATERIALS: Material[] = [
-  // --- 原材料 (Ingredients) ---
+  // --- 原材料 (Ingredients 29種) ---
   {
     id: 'mat-ing-soy-milk',
     category: 'ingredient',
@@ -414,7 +414,7 @@ export const INITIAL_MATERIALS: Material[] = [
     notes: '抹茶の退色防止と美しい発色維持',
   },
 
-  // --- 資材 (Packaging) - 全フレーバー共通 ---
+  // --- 資材 (Packaging) - カップ用 (6種) ---
   {
     id: 'mat-pkg-001',
     category: 'packaging',
@@ -499,20 +499,80 @@ export const INITIAL_MATERIALS: Material[] = [
     unit_cost: 5.0,
     notes: '無漂白天然木・紙個包装',
   },
+
+  // --- 資材 (Packaging) - 業務用2Lバルク用 (2種 新規追加) ---
+  {
+    id: 'mat-pkg-bulk-001',
+    category: 'packaging',
+    name: '業務用 2L角型バルク容器 (PP製本体＋密封フタ)',
+    supplier: 'リスパック / 業務用包装容器',
+    package_unit_name: '1ケース (100組)',
+    package_quantity: 100,
+    unit_type: 'piece',
+    package_price: 18000,
+    shipping_cost: 0,
+    total_package_cost: 18000,
+    unit_cost: 180.0,
+    notes: '冷凍耐性角型ディッシャー用コンテナ (2,000ml)',
+  },
+  {
+    id: 'mat-pkg-bulk-002',
+    category: 'packaging',
+    name: '業務用 バルク容器用 一括表示ラベルシール',
+    supplier: 'ラベル印刷工房',
+    package_unit_name: '1ロット (1000枚)',
+    package_quantity: 1000,
+    unit_type: 'piece',
+    package_price: 6000,
+    shipping_cost: 0,
+    total_package_cost: 6000,
+    unit_cost: 6.0,
+    notes: '冷凍用強粘着ユポ紙・業務用表示',
+  },
 ];
 
-// 共通資材リスト生成ヘルパー
-const COMMON_PACKAGINGS = [
-  { id: 'pkg-1', material_id: 'mat-pkg-001', quantity_per_unit: 1 },
-  { id: 'pkg-2', material_id: 'mat-pkg-002', quantity_per_unit: 1 },
-  { id: 'pkg-3', material_id: 'mat-pkg-003', quantity_per_unit: 1 },
-  { id: 'pkg-4', material_id: 'mat-pkg-004', quantity_per_unit: 1 },
-  { id: 'pkg-5', material_id: 'mat-pkg-005', quantity_per_unit: 1 },
-  { id: 'pkg-6', material_id: 'mat-pkg-006', quantity_per_unit: 1 },
+// 共通資材構成 (カップ用: 1個あたり約55円)
+export const COMMON_CUP_PACKAGINGS = [
+  { id: 'pkg-c1', material_id: 'mat-pkg-001', quantity_per_unit: 1 },
+  { id: 'pkg-c2', material_id: 'mat-pkg-002', quantity_per_unit: 1 },
+  { id: 'pkg-c3', material_id: 'mat-pkg-003', quantity_per_unit: 1 },
+  { id: 'pkg-c4', material_id: 'mat-pkg-004', quantity_per_unit: 1 },
+  { id: 'pkg-c5', material_id: 'mat-pkg-005', quantity_per_unit: 1 },
+  { id: 'pkg-c6', material_id: 'mat-pkg-006', quantity_per_unit: 1 },
 ];
+
+// 共通資材構成 (2Lバルク用: 1本あたり186円)
+export const COMMON_BULK_PACKAGINGS = [
+  { id: 'pkg-b1', material_id: 'mat-pkg-bulk-001', quantity_per_unit: 1 },
+  { id: 'pkg-b2', material_id: 'mat-pkg-bulk-002', quantity_per_unit: 1 },
+];
+
+// ヘルパー: デフォルト形態別設定を生成
+function createDefaultConfigs(cupWholesale: number, cupRetail: number, bulkWholesale = 4320, bulkRetail = 6000) {
+  return {
+    cup_config: {
+      package_type: 'cup' as PackageType,
+      unit_name: '個',
+      target_quantity: 65,
+      labor_cost: 3000,
+      target_wholesale_price: cupWholesale,
+      target_retail_price: cupRetail,
+      packagings: [...COMMON_CUP_PACKAGINGS],
+    },
+    bulk_config: {
+      package_type: 'bulk' as PackageType,
+      unit_name: '本 (2L)',
+      target_quantity: 3,
+      labor_cost: 3600,
+      target_wholesale_price: bulkWholesale,
+      target_retail_price: bulkRetail,
+      packagings: [...COMMON_BULK_PACKAGINGS],
+    },
+  };
+}
 
 // ============================================================
-// 本番用 レシピ10種データ
+// 本番用 レシピ10種データ (カップ & バルク両対応)
 // ============================================================
 
 export const INITIAL_RECIPES: Recipe[] = [
@@ -522,12 +582,9 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【アールグレイ】',
     category: '米粉アイス',
     description: 'ベルガモット香るアールグレイシロップと米粉のなめらかな口当たり。白みそが深みをプラス。',
-    target_quantity: 65,
-    labor_cost: 3000,
-    target_retail_price: 520,
-    target_wholesale_price: 340,
+    ...createDefaultConfigs(340, 520),
     ingredients: [
-      { id: 'rg-1', material_id: 'mat-ing-earl-grey-syrup', amount: 1500, unit: 'g' }, // 500g×3本
+      { id: 'rg-1', material_id: 'mat-ing-earl-grey-syrup', amount: 1500, unit: 'g' },
       { id: 'rg-2', material_id: 'mat-ing-soy-milk', amount: 3500, unit: 'ml' },
       { id: 'rg-3', material_id: 'mat-ing-beet-syrup', amount: 650, unit: 'g' },
       { id: 'rg-4', material_id: 'mat-ing-white-miso', amount: 200, unit: 'g' },
@@ -535,7 +592,6 @@ export const INITIAL_RECIPES: Recipe[] = [
       { id: 'rg-6', material_id: 'mat-ing-rice-flour', amount: 200, unit: 'g' },
       { id: 'rg-7', material_id: 'mat-ing-rice-oil', amount: 430, unit: 'g' },
     ],
-    packagings: [...COMMON_PACKAGINGS],
     notes: '豆乳1本と米粉でα化、冷やして残りの液体と米油を合わせてブレンダー',
   },
 
@@ -545,19 +601,15 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【りんご】',
     category: '米粉アイス',
     description: '100%果汁「おいしすぎるりんご」を贅沢に使用した爽やかな米粉ソルベアイス。',
-    target_quantity: 65,
-    labor_cost: 3000,
-    target_retail_price: 500,
-    target_wholesale_price: 330,
+    ...createDefaultConfigs(330, 500),
     ingredients: [
-      { id: 'ra-1', material_id: 'mat-ing-oishisugiru-apple', amount: 4000, unit: 'ml' }, // 1L×4本
+      { id: 'ra-1', material_id: 'mat-ing-oishisugiru-apple', amount: 4000, unit: 'ml' },
       { id: 'ra-2', material_id: 'mat-ing-beet-syrup', amount: 1650, unit: 'g' },
       { id: 'ra-3', material_id: 'mat-ing-coconut-cream', amount: 500, unit: 'g' },
       { id: 'ra-4', material_id: 'mat-ing-lemon-juice', amount: 280, unit: 'ml' },
       { id: 'ra-5', material_id: 'mat-ing-vanilla-oil', amount: 11, unit: 'g' },
       { id: 'ra-6', material_id: 'mat-ing-rice-flour', amount: 167, unit: 'g' },
     ],
-    packagings: [...COMMON_PACKAGINGS],
     notes: 'ジュース1本と米粉でα化、シロップ投入',
   },
 
@@ -567,10 +619,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【バニラ】',
     category: '米粉アイス',
     description: '有機豆乳と豆乳ホイップ、ココナッツパウダーでコクを極めたシグネチャーバニラ。',
-    target_quantity: 65,
-    labor_cost: 3000,
-    target_retail_price: 480,
-    target_wholesale_price: 320,
+    ...createDefaultConfigs(320, 480),
     ingredients: [
       { id: 'rv-1', material_id: 'mat-ing-soy-milk', amount: 4000, unit: 'ml' },
       { id: 'rv-2', material_id: 'mat-ing-beet-syrup', amount: 1100, unit: 'g' },
@@ -580,7 +629,6 @@ export const INITIAL_RECIPES: Recipe[] = [
       { id: 'rv-6', material_id: 'mat-ing-vanilla-essence', amount: 90, unit: 'g' },
       { id: 'rv-7', material_id: 'mat-ing-rice-flour', amount: 230, unit: 'g' },
     ],
-    packagings: [...COMMON_PACKAGINGS],
     notes: '豆乳1Lと米粉でα化',
   },
 
@@ -590,10 +638,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【ショコラ】',
     category: '米粉アイス',
     description: 'アーモンドミルクベースにカカオマス、ココアバター、ココアパウダーをブレンドした濃厚ショコラ。',
-    target_quantity: 65,
-    labor_cost: 3000,
-    target_retail_price: 540,
-    target_wholesale_price: 360,
+    ...createDefaultConfigs(360, 540),
     ingredients: [
       { id: 'rc-1', material_id: 'mat-ing-almond-milk', amount: 3500, unit: 'ml' },
       { id: 'rc-2', material_id: 'mat-ing-beet-syrup', amount: 1680, unit: 'g' },
@@ -605,7 +650,6 @@ export const INITIAL_RECIPES: Recipe[] = [
       { id: 'rc-8', material_id: 'mat-ing-cocoa-butter', amount: 50, unit: 'g' },
       { id: 'rc-9', material_id: 'mat-ing-cacao-mass', amount: 180, unit: 'g' },
     ],
-    packagings: [...COMMON_PACKAGINGS],
     notes: 'アーモンドミルク1Lと米粉でα化。液をパストライザーに入れたあと★材料(ココア,バター,カカオマス)を入れる',
   },
 
@@ -615,10 +659,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【ドラゴンフルーツ】',
     category: '米粉アイス',
     description: '鮮烈なマゼンタピンクが映えるドラゴンフルーツピューレとパインジュースのトロピカルアイス。',
-    target_quantity: 65,
-    labor_cost: 3000,
-    target_retail_price: 520,
-    target_wholesale_price: 350,
+    ...createDefaultConfigs(350, 520),
     ingredients: [
       { id: 'rd-1', material_id: 'mat-ing-pine-juice', amount: 673, unit: 'ml' },
       { id: 'rd-2', material_id: 'mat-ing-coconut-cream', amount: 561, unit: 'g' },
@@ -629,9 +670,8 @@ export const INITIAL_RECIPES: Recipe[] = [
       { id: 'rd-7', material_id: 'mat-ing-rice-flour', amount: 157, unit: 'g' },
       { id: 'rd-8', material_id: 'mat-ing-rice-oil', amount: 673, unit: 'g' },
       { id: 'rd-9', material_id: 'mat-ing-dragon-fruit-puree', amount: 1571, unit: 'g' },
-      { id: 'rd-10', material_id: 'mat-ing-lemon-juice', amount: 360, unit: 'ml' }, // 180g×2回
+      { id: 'rd-10', material_id: 'mat-ing-lemon-juice', amount: 360, unit: 'ml' },
     ],
-    packagings: [...COMMON_PACKAGINGS],
     notes: '水と米粉でα化。米油は最後にブレンダー。ドラゴンフルーツピューレとレモン果汁(2回目)はパストライザー加熱後に投入',
   },
 
@@ -641,10 +681,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【ほうじ】',
     category: '米粉アイス',
     description: '香ばしい京都産ほうじ茶パウダーに濃縮甘酒ときび砂糖、白みそを合わせた和の絶品クラフト。',
-    target_quantity: 65,
-    labor_cost: 3000,
-    target_retail_price: 500,
-    target_wholesale_price: 330,
+    ...createDefaultConfigs(330, 500),
     ingredients: [
       { id: 'rh-1', material_id: 'mat-ing-soy-milk', amount: 2000, unit: 'ml' },
       { id: 'rh-2', material_id: 'mat-ing-amazake', amount: 2000, unit: 'g' },
@@ -656,7 +693,6 @@ export const INITIAL_RECIPES: Recipe[] = [
       { id: 'rh-8', material_id: 'mat-ing-hojicha-powder', amount: 160, unit: 'g' },
       { id: 'rh-9', material_id: 'mat-ing-rice-oil', amount: 620, unit: 'g' },
     ],
-    packagings: [...COMMON_PACKAGINGS],
     notes: '甘酒1本に米粉でα化。68℃低温殺菌。のりと液を合わせる時にほうじ茶パウダーと米油もブレンダー',
   },
 
@@ -666,22 +702,18 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【ミックスベリー】',
     category: '米粉アイス',
     description: 'ストロベリーとフランボワーズ（木苺）のダブルベリーピューレが織りなす甘酸っぱい濃厚アイス。',
-    target_quantity: 65,
-    labor_cost: 3000,
-    target_retail_price: 520,
-    target_wholesale_price: 350,
+    ...createDefaultConfigs(350, 520),
     ingredients: [
       { id: 'rm-1', material_id: 'mat-ing-framboise-puree', amount: 300, unit: 'g' },
       { id: 'rm-2', material_id: 'mat-ing-beet-syrup', amount: 1950, unit: 'g' },
       { id: 'rm-3', material_id: 'mat-ing-coconut-cream', amount: 350, unit: 'g' },
-      { id: 'rm-4', material_id: 'mat-ing-lemon-juice', amount: 320, unit: 'ml' }, // 160g×2回
+      { id: 'rm-4', material_id: 'mat-ing-lemon-juice', amount: 320, unit: 'ml' },
       { id: 'rm-5', material_id: 'mat-ing-vanilla-oil', amount: 22, unit: 'g' },
       { id: 'rm-6', material_id: 'mat-ing-water', amount: 2180, unit: 'g' },
       { id: 'rm-7', material_id: 'mat-ing-rice-flour', amount: 150, unit: 'g' },
       { id: 'rm-8', material_id: 'mat-ing-rice-oil', amount: 430, unit: 'g' },
       { id: 'rm-9', material_id: 'mat-ing-strawberry-puree', amount: 1090, unit: 'g' },
     ],
-    packagings: [...COMMON_PACKAGINGS],
     notes: '水1Lと米粉でα化。米油は最後にブレンダー。ストロベリーピューレとレモン果汁(2回目)はパストライザー加熱後に投入',
   },
 
@@ -691,10 +723,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【抹茶】',
     category: '米粉アイス',
     description: '京都宇治の石臼挽き有機抹茶にクロレラを合わせ、美しい緑と上品なほろ苦さを引き出した逸品。',
-    target_quantity: 65,
-    labor_cost: 3000,
-    target_retail_price: 520,
-    target_wholesale_price: 350,
+    ...createDefaultConfigs(350, 520),
     ingredients: [
       { id: 'rmt-1', material_id: 'mat-ing-soy-milk', amount: 2000, unit: 'ml' },
       { id: 'rmt-2', material_id: 'mat-ing-amazake', amount: 2000, unit: 'g' },
@@ -707,7 +736,6 @@ export const INITIAL_RECIPES: Recipe[] = [
       { id: 'rmt-9', material_id: 'mat-ing-chlorella-powder', amount: 20, unit: 'g' },
       { id: 'rmt-10', material_id: 'mat-ing-rice-oil', amount: 620, unit: 'g' },
     ],
-    packagings: [...COMMON_PACKAGINGS],
     notes: '甘酒1本に米粉でα化。68℃低温殺菌。のりと液を合わせる時に抹茶、クロレラ、米油もブレンダー',
   },
 
@@ -717,19 +745,15 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【もも】',
     category: '米粉アイス',
     description: '100%果汁「おいしすぎるもも」を使用した、みずみずしい桃のアロマ広がる極上フルーティーアイス。',
-    target_quantity: 65,
-    labor_cost: 3000,
-    target_retail_price: 520,
-    target_wholesale_price: 340,
+    ...createDefaultConfigs(340, 520),
     ingredients: [
-      { id: 'rp-1', material_id: 'mat-ing-oishisugiru-peach', amount: 4000, unit: 'ml' }, // 1L×4本
+      { id: 'rp-1', material_id: 'mat-ing-oishisugiru-peach', amount: 4000, unit: 'ml' },
       { id: 'rp-2', material_id: 'mat-ing-beet-syrup', amount: 1650, unit: 'g' },
       { id: 'rp-3', material_id: 'mat-ing-coconut-cream', amount: 500, unit: 'g' },
       { id: 'rp-4', material_id: 'mat-ing-lemon-juice', amount: 280, unit: 'ml' },
       { id: 'rp-5', material_id: 'mat-ing-vanilla-oil', amount: 11, unit: 'g' },
       { id: 'rp-6', material_id: 'mat-ing-rice-flour', amount: 167, unit: 'g' },
     ],
-    packagings: [...COMMON_PACKAGINGS],
     notes: 'ジュース1本と米粉でα化、シロップ投入',
   },
 
@@ -739,10 +763,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【マンゴー】',
     category: '米粉アイス',
     description: '濃厚なアップルマンゴーピューレにココナッツとレモンの酸味を加えた、リッチでコク深いマンゴーアイス。',
-    target_quantity: 65,
-    labor_cost: 3000,
-    target_retail_price: 540,
-    target_wholesale_price: 360,
+    ...createDefaultConfigs(360, 540),
     ingredients: [
       { id: 'rmg-1', material_id: 'mat-ing-mango-puree', amount: 3000, unit: 'g' },
       { id: 'rmg-2', material_id: 'mat-ing-water', amount: 1000, unit: 'g' },
@@ -752,29 +773,54 @@ export const INITIAL_RECIPES: Recipe[] = [
       { id: 'rmg-6', material_id: 'mat-ing-vanilla-oil', amount: 11, unit: 'g' },
       { id: 'rmg-7', material_id: 'mat-ing-rice-flour', amount: 330, unit: 'g' },
     ],
-    packagings: [...COMMON_PACKAGINGS],
     notes: '水と米粉でα化。マンゴーピューレ3000gと合わせブレンド',
   },
 ];
 
 // ============================================================
-// ローカルストレージ キー (v2 本番用10種)
+// ローカルストレージ キー (v3 カップ & バルク両対応)
 // ============================================================
-const STORAGE_KEY_MATERIALS = 'soystories_cost_materials_v2';
-const STORAGE_KEY_RECIPES = 'soystories_cost_recipes_v2';
+const STORAGE_KEY_MATERIALS = 'soystories_cost_materials_v3';
+const STORAGE_KEY_RECIPES = 'soystories_cost_recipes_v3';
 
 // メモリキャッシュ
 let inMemoryMaterials: Material[] = [...INITIAL_MATERIALS];
 let inMemoryRecipes: Recipe[] = [...INITIAL_RECIPES];
 
 /**
- * 原価計算ロジック（コア）
+ * 原価計算ロジック（カップ / バルク両対応）
  */
-export function calculateRecipeCost(recipe: Recipe, materials: Material[]): RecipeCostBreakdown {
+export function calculateRecipeCost(
+  recipe: Recipe,
+  materials: Material[],
+  packageType: PackageType = 'cup'
+): RecipeCostBreakdown {
   const materialMap = new Map<string, Material>(materials.map(m => [m.id, m]));
-  const targetQty = recipe.target_quantity > 0 ? recipe.target_quantity : 1;
 
-  // 1. 材料費の計算
+  // 現在のパッケージ設定（cup または bulk）を取得
+  const config: PackageConfig = packageType === 'bulk'
+    ? (recipe.bulk_config || {
+        package_type: 'bulk',
+        unit_name: '本 (2L)',
+        target_quantity: 3,
+        labor_cost: 3600,
+        target_wholesale_price: 4320,
+        target_retail_price: 6000,
+        packagings: [...COMMON_BULK_PACKAGINGS],
+      })
+    : (recipe.cup_config || {
+        package_type: 'cup',
+        unit_name: '個',
+        target_quantity: recipe.target_quantity || 65,
+        labor_cost: recipe.labor_cost ?? 3000,
+        target_wholesale_price: recipe.target_wholesale_price ?? 340,
+        target_retail_price: recipe.target_retail_price ?? 520,
+        packagings: recipe.packagings || [...COMMON_CUP_PACKAGINGS],
+      });
+
+  const targetQty = config.target_quantity > 0 ? config.target_quantity : 1;
+
+  // 1. 材料費の計算（原材料は共通）
   let totalIngredientCost = 0;
   const ingredientItems = recipe.ingredients.map(item => {
     const material = materialMap.get(item.material_id);
@@ -809,9 +855,9 @@ export function calculateRecipeCost(recipe: Recipe, materials: Material[]): Reci
 
   const unitIngredientCost = totalIngredientCost / targetQty;
 
-  // 2. 資材費の計算（1個あたりの使用数から算出）
+  // 2. 資材費の計算（カップ用資材 or バルク用資材）
   let unitPackagingCost = 0;
-  const packagingItems = recipe.packagings.map(item => {
+  const packagingItems = (config.packagings || []).map(item => {
     const material = materialMap.get(item.material_id);
     const unitCost = material ? material.unit_cost : 0;
     const costPerUnit = item.quantity_per_unit * unitCost;
@@ -841,7 +887,7 @@ export function calculateRecipeCost(recipe: Recipe, materials: Material[]): Reci
   const totalPackagingCost = unitPackagingCost * targetQty;
 
   // 3. 人件費（直接入力）
-  const totalLaborCost = recipe.labor_cost || 0;
+  const totalLaborCost = config.labor_cost || 0;
   const unitLaborCost = totalLaborCost / targetQty;
 
   // 4. 製造原価合計
@@ -854,18 +900,21 @@ export function calculateRecipeCost(recipe: Recipe, materials: Material[]): Reci
   const laborRatio = totalManufacturingCost > 0 ? (totalLaborCost / totalManufacturingCost) * 100 : 0;
 
   // 6. 卸・小売シミュレーション
-  const wholesalePrice = recipe.target_wholesale_price || 0;
+  const wholesalePrice = config.target_wholesale_price || 0;
   const wholesaleCostRatio = wholesalePrice > 0 ? (unitManufacturingCost / wholesalePrice) * 100 : 0;
   const wholesaleGrossMargin = wholesalePrice - unitManufacturingCost;
   const wholesaleMarginRatio = wholesalePrice > 0 ? (wholesaleGrossMargin / wholesalePrice) * 100 : 0;
 
-  const retailPrice = recipe.target_retail_price || 0;
+  const retailPrice = config.target_retail_price || 0;
   const retailCostRatio = retailPrice > 0 ? (unitManufacturingCost / retailPrice) * 100 : 0;
   const retailGrossMargin = retailPrice - unitManufacturingCost;
   const retailMarginRatio = retailPrice > 0 ? (retailGrossMargin / retailPrice) * 100 : 0;
 
   return {
     recipe,
+    package_type: packageType,
+    unit_name: config.unit_name || (packageType === 'bulk' ? '本 (2L)' : '個'),
+    target_quantity: targetQty,
     ingredient_items: ingredientItems,
     total_ingredient_cost: totalIngredientCost,
     unit_ingredient_cost: unitIngredientCost,
@@ -1046,17 +1095,41 @@ export async function getRecipeById(id: string): Promise<Recipe | null> {
 }
 
 export async function saveRecipe(recipe: Partial<Recipe> & { name: string }): Promise<Recipe> {
+  // Ensure cup_config and bulk_config exist
+  const defaultCup = {
+    package_type: 'cup' as PackageType,
+    unit_name: '個',
+    target_quantity: Number(recipe.cup_config?.target_quantity || recipe.target_quantity || 65),
+    labor_cost: Number(recipe.cup_config?.labor_cost ?? recipe.labor_cost ?? 3000),
+    target_wholesale_price: Number(recipe.cup_config?.target_wholesale_price ?? recipe.target_wholesale_price ?? 340),
+    target_retail_price: Number(recipe.cup_config?.target_retail_price ?? recipe.target_retail_price ?? 520),
+    packagings: recipe.cup_config?.packagings || recipe.packagings || [...COMMON_CUP_PACKAGINGS],
+  };
+
+  const defaultBulk = {
+    package_type: 'bulk' as PackageType,
+    unit_name: '本 (2L)',
+    target_quantity: Number(recipe.bulk_config?.target_quantity || 3),
+    labor_cost: Number(recipe.bulk_config?.labor_cost ?? 3600),
+    target_wholesale_price: Number(recipe.bulk_config?.target_wholesale_price ?? 4320),
+    target_retail_price: Number(recipe.bulk_config?.target_retail_price ?? 6000),
+    packagings: recipe.bulk_config?.packagings || [...COMMON_BULK_PACKAGINGS],
+  };
+
   const newOrUpdated: Recipe = {
     id: recipe.id || `recipe-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
     name: recipe.name,
     category: recipe.category || '米粉アイス',
     description: recipe.description || '',
-    target_quantity: Number(recipe.target_quantity || 1),
-    labor_cost: Number(recipe.labor_cost || 0),
-    target_retail_price: Number(recipe.target_retail_price || 0),
-    target_wholesale_price: Number(recipe.target_wholesale_price || 0),
     ingredients: recipe.ingredients || [],
-    packagings: recipe.packagings || [],
+    cup_config: defaultCup,
+    bulk_config: defaultBulk,
+    // Flatten for backward compatibility
+    target_quantity: defaultCup.target_quantity,
+    labor_cost: defaultCup.labor_cost,
+    target_wholesale_price: defaultCup.target_wholesale_price,
+    target_retail_price: defaultCup.target_retail_price,
+    packagings: defaultCup.packagings,
     notes: recipe.notes || '',
     updated_at: new Date().toISOString(),
   };
@@ -1109,15 +1182,16 @@ export async function deleteRecipe(id: string): Promise<boolean> {
 }
 
 /**
- * 本番データ（米粉アイス10種）へのリセット関数
+ * リセット関数
  */
 export async function resetToDefaultPreset(): Promise<void> {
   inMemoryMaterials = [...INITIAL_MATERIALS];
   inMemoryRecipes = [...INITIAL_RECIPES];
   if (typeof window !== 'undefined') {
-    // 旧バージョンのキャッシュもクリーンアップ
     localStorage.removeItem('soystories_cost_materials_v1');
     localStorage.removeItem('soystories_cost_recipes_v1');
+    localStorage.removeItem('soystories_cost_materials_v2');
+    localStorage.removeItem('soystories_cost_recipes_v2');
     localStorage.setItem(STORAGE_KEY_MATERIALS, JSON.stringify(INITIAL_MATERIALS));
     localStorage.setItem(STORAGE_KEY_RECIPES, JSON.stringify(INITIAL_RECIPES));
   }

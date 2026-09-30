@@ -18,13 +18,14 @@ import {
   PieChart, 
   Boxes
 } from 'lucide-react';
-import { Recipe, Material, RecipeCostBreakdown } from '@/types/cost';
+import { Recipe, Material, RecipeCostBreakdown, PackageType } from '@/types/cost';
 import { getRecipes, getMaterials, calculateRecipeCost } from '@/lib/cost-api';
 
 export default function CostSummaryPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activePackageType, setActivePackageType] = useState<PackageType>('cup');
 
   useEffect(() => {
     async function load() {
@@ -36,9 +37,13 @@ export default function CostSummaryPage() {
     load();
   }, []);
 
+  const isBulk = activePackageType === 'bulk';
+  const unitLabel = isBulk ? '1本 (2L)' : '1個 (120ml)';
+  const shortUnit = isBulk ? '本' : '個';
+
   const breakdowns = useMemo(() => {
-    return recipes.map(r => calculateRecipeCost(r, materials));
-  }, [recipes, materials]);
+    return recipes.map(r => calculateRecipeCost(r, materials, activePackageType));
+  }, [recipes, materials, activePackageType]);
 
   // Chart 1: Cost Breakdown Stacked Bar Chart data
   const stackedChartData = useMemo(() => {
@@ -48,7 +53,7 @@ export default function CostSummaryPage() {
       '資材代': Number(b.unit_packaging_cost.toFixed(1)),
       '人件費': Number(b.unit_labor_cost.toFixed(1)),
       '製造原価': Math.round(b.unit_manufacturing_cost),
-      '想定卸価格': b.recipe.target_wholesale_price,
+      '想定卸価格': b.wholesale.price,
     }));
   }, [breakdowns]);
 
@@ -58,7 +63,7 @@ export default function CostSummaryPage() {
       name: b.recipe.name.replace('米粉アイス【', '').replace('】', ''),
       '製造原価': Math.round(b.unit_manufacturing_cost),
       '卸粗利益': Math.round(b.wholesale.gross_margin),
-      '卸価格': b.recipe.target_wholesale_price,
+      '卸価格': b.wholesale.price,
       '粗利率': Number(b.wholesale.margin_ratio.toFixed(1)),
     }));
   }, [breakdowns]);
@@ -81,11 +86,11 @@ export default function CostSummaryPage() {
             <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
               原価構造・粗利分析
             </span>
-            <span className="text-xs text-slate-400">全10フレーバー比較</span>
+            <span className="text-xs text-slate-400">全10フレーバー比較（カップ ⇔ 2Lバルク）</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">原価・粗利サマリー分析</h1>
           <p className="text-xs text-slate-500 mt-1">
-            各商品の材料費・資材費・人件費の構成バランスと、卸売価格における粗利マージンを比較分析します。
+            製造形態（個食カップ / 業務用2Lバルク）を切り替えて、材料費・資材費・人件費の構成バランスと卸売粗利マージンを比較分析します。
           </p>
         </div>
 
@@ -99,11 +104,48 @@ export default function CostSummaryPage() {
         </div>
       </div>
 
+      {/* Segmented Switcher for Cup vs Bulk */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center p-1 bg-slate-100/90 rounded-xl border border-slate-200/80">
+          <button
+            onClick={() => setActivePackageType('cup')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+              !isBulk
+                ? 'bg-white text-slate-900 shadow-2xs'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <span>🍨 個食カップ (120ml)</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${!isBulk ? 'bg-amber-100 text-amber-900' : 'bg-slate-200 text-slate-600'}`}>
+              65個 / 仕込み
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActivePackageType('bulk')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+              isBulk
+                ? 'bg-white text-slate-900 shadow-2xs'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <span>📦 業務用 2Lバルク</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${isBulk ? 'bg-emerald-100 text-emerald-900' : 'bg-slate-200 text-slate-600'}`}>
+              3本 (6L) / 仕込み
+            </span>
+          </button>
+        </div>
+
+        <div className="text-xs text-slate-500 font-medium">
+          表示基準: <span className="font-semibold text-slate-800">{unitLabel} あたり</span>
+        </div>
+      </div>
+
       {/* Overview Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs">
           <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">
-            平均製造原価 (1個)
+            平均製造原価 ({unitLabel})
           </div>
           <div className="text-2xl font-bold text-slate-900 font-mono">
             ¥{Math.round(
@@ -117,7 +159,7 @@ export default function CostSummaryPage() {
 
         <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs">
           <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">
-            平均 卸売粗利率
+            平均 卸売粗利率 ({isBulk ? 'バルク卸' : 'カップ卸'})
           </div>
           <div className="text-2xl font-bold text-emerald-600 font-mono">
             {(
@@ -131,7 +173,7 @@ export default function CostSummaryPage() {
 
         <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs">
           <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">
-            平均 1個あたり粗利額 (卸)
+            平均 粗利額 (卸売 / {unitLabel})
           </div>
           <div className="text-2xl font-bold text-slate-900 font-mono">
             ¥{Math.round(
@@ -139,7 +181,7 @@ export default function CostSummaryPage() {
             ).toLocaleString()}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            カフェ・卸先納品ごとの手残り額
+            {isBulk ? '飲食店・カフェへの2L納品ごとの手残り額' : '小売店・カフェへの1個納品ごとの手残り額'}
           </div>
         </div>
       </div>
@@ -152,7 +194,7 @@ export default function CostSummaryPage() {
           <div className="border-b border-slate-100 pb-2.5 flex items-center justify-between">
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Calculator className="w-4 h-4 text-slate-500" />
-              1個あたりの製造原価 構成比較 (円)
+              {unitLabel}あたりの製造原価 構成比較 (円)
             </h2>
             <span className="text-[11px] text-slate-400">積層比較</span>
           </div>
@@ -208,8 +250,11 @@ export default function CostSummaryPage() {
 
       {/* Comparison Detail Table */}
       <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
-        <div className="p-4 border-b border-slate-100 font-bold text-xs text-slate-800">
-          全10種 原価・マージン詳細一覧
+        <div className="p-4 border-b border-slate-100 font-bold text-xs text-slate-800 flex items-center justify-between">
+          <span>全10種 原価・マージン詳細一覧 ({unitLabel})</span>
+          <span className="text-[11px] font-normal text-slate-500">
+            {isBulk ? '仕込み1回 = 2L × 3本 (計6L)' : '仕込み1回 = 120ml × 65個'}
+          </span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
@@ -217,10 +262,10 @@ export default function CostSummaryPage() {
               <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-medium">
                 <th className="py-2.5 px-4">レシピ名</th>
                 <th className="py-2.5 px-4 text-right">仕上がり定数</th>
-                <th className="py-2.5 px-4 text-right">材料費 (1個)</th>
-                <th className="py-2.5 px-4 text-right">資材代 (1個)</th>
-                <th className="py-2.5 px-4 text-right">人件費 (1個)</th>
-                <th className="py-2.5 px-4 text-right font-semibold text-slate-900">1個あたり製造原価</th>
+                <th className="py-2.5 px-4 text-right">材料費 (1{shortUnit})</th>
+                <th className="py-2.5 px-4 text-right">資材代 (1{shortUnit})</th>
+                <th className="py-2.5 px-4 text-right">人件費 (1{shortUnit})</th>
+                <th className="py-2.5 px-4 text-right font-semibold text-slate-900">{unitLabel}あたり製造原価</th>
                 <th className="py-2.5 px-4 text-right">想定卸売価格</th>
                 <th className="py-2.5 px-4 text-right text-emerald-700 font-semibold">卸粗利益</th>
                 <th className="py-2.5 px-4 text-right">卸原価率</th>
@@ -234,7 +279,7 @@ export default function CostSummaryPage() {
                     {b.recipe.name}
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-slate-500">
-                    {b.recipe.target_quantity}個
+                    {b.target_quantity}{shortUnit}
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-slate-600">
                     ¥{b.unit_ingredient_cost.toFixed(1)}
@@ -246,13 +291,13 @@ export default function CostSummaryPage() {
                     ¥{b.unit_labor_cost.toFixed(1)}
                   </td>
                   <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
-                    ¥{Math.round(b.unit_manufacturing_cost)}
+                    ¥{Math.round(b.unit_manufacturing_cost).toLocaleString()}
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-slate-700">
-                    ¥{b.recipe.target_wholesale_price.toLocaleString()}
+                    ¥{b.wholesale.price.toLocaleString()}
                   </td>
                   <td className="py-3 px-4 text-right font-mono font-semibold text-emerald-600">
-                    ¥{Math.round(b.wholesale.gross_margin)}
+                    ¥{Math.round(b.wholesale.gross_margin).toLocaleString()}
                   </td>
                   <td className="py-3 px-4 text-right font-mono">
                     <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">
