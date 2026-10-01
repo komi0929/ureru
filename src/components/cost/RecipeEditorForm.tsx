@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -17,10 +17,11 @@ import {
   CheckCircle2,
   UtensilsCrossed,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Tag
 } from 'lucide-react';
-import { Material, Recipe, RecipeIngredient, RecipePackaging, PackageType, PackageConfig } from '@/types/cost';
-import { calculateRecipeCost, saveRecipe, COMMON_CUP_PACKAGINGS, COMMON_BULK_PACKAGINGS } from '@/lib/cost-api';
+import { Material, Recipe, RecipeIngredient, RecipePackaging, PackageType, PackageConfig, UniformPricingConfig } from '@/types/cost';
+import { calculateRecipeCost, saveRecipe, getUniformPricing, COMMON_CUP_PACKAGINGS, COMMON_BULK_PACKAGINGS } from '@/lib/cost-api';
 import TutorialModal from '@/components/cost/TutorialModal';
 
 interface RecipeEditorFormProps {
@@ -88,9 +89,35 @@ export default function RecipeEditorForm({
     initialRecipe?.bulk_config?.packagings || [...COMMON_BULK_PACKAGINGS]
   );
 
+  // Uniform Pricing Config
+  const [uniformPricing, setUniformPricing] = useState<UniformPricingConfig | null>(null);
+
+  useEffect(() => {
+    async function loadPricing() {
+      const p = await getUniformPricing();
+      setUniformPricing(p);
+      // If newly creating a recipe, set default wholesale prices to uniform pricing
+      if (!isEditing && !initialRecipe) {
+        setCupWholesalePrice(p.cup_wholesale_price);
+        setCupRetailPrice(p.cup_retail_price);
+        setBulkWholesalePrice(p.bulk_wholesale_price);
+        setBulkRetailPrice(p.bulk_retail_price);
+      }
+    }
+    loadPricing();
+  }, [isEditing, initialRecipe]);
+
   // Materials split
   const ingredientMasters = useMemo(() => materials.filter(m => m.category === 'ingredient'), [materials]);
   const packagingMasters = useMemo(() => materials.filter(m => m.category === 'packaging'), [materials]);
+
+  // Total ingredients weight (g/ml) & estimated 100g cup count
+  const totalIngredientWeight = useMemo(() => {
+    return ingredients.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  }, [ingredients]);
+  const estimatedCupCount = useMemo(() => {
+    return totalIngredientWeight > 0 ? Math.round(totalIngredientWeight / 100) : 65;
+  }, [totalIngredientWeight]);
 
   // Current Recipe Object for calculation
   const currentRecipe: Recipe = useMemo(() => ({
@@ -261,7 +288,7 @@ export default function RecipeEditorForm({
               <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700">
                 {isEditing ? 'レシピ編集' : '新規レシピ作成'}
               </span>
-              <span className="text-xs text-slate-400">カップ（65個）＆ 2Lバルク（3本）同時管理</span>
+              <span className="text-xs text-slate-400">カップ（100g・65個）＆ 2Lバルク（3本）同時管理</span>
             </div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
               {name || '新規レシピ配合'}
@@ -303,7 +330,7 @@ export default function RecipeEditorForm({
         </div>
         <div className="text-xs text-slate-700 leading-relaxed">
           <strong className="text-amber-950 font-bold block mb-0.5">配合と形態設定のポイント：</strong>
-          「2. 原材料配合」で豆乳・ピューレ等のg配合を入力すれば、個食カップ（65個）と業務用2Lバルク（3本）の両方に共通反映されます。「3. 形態別設定」のタブで、それぞれの仕上がり数・資材・人件費・想定卸売価格を個別に調整可能です。
+          「2. 原材料配合」で豆乳・ピューレ等のg配合を入力すれば、個食カップ（100g・65個）と業務用2Lバルク（3本）の両方に共通反映されます。「3. 形態別設定」のタブで、それぞれの仕上がり数・資材・人件費・想定卸売価格を個別に調整可能です。
         </div>
       </div>
 
@@ -468,7 +495,7 @@ export default function RecipeEditorForm({
               <div>
                 <span className="text-xs font-semibold text-slate-800">🥣 原材料費 小計 (1仕込み)</span>
                 <div className="text-[11px] text-slate-500">
-                  配合材料 {ingredients.length}品目
+                  配合材料 {ingredients.length}品目 / 配合総量: {totalIngredientWeight.toLocaleString()}g (100gカップ換算: 約{estimatedCupCount}個分)
                 </div>
               </div>
               <div className="text-right">
@@ -503,7 +530,7 @@ export default function RecipeEditorForm({
                       : 'text-slate-500 hover:text-slate-900'
                   }`}
                 >
-                  🍨 個食カップ設定 (120ml)
+                  🍨 個食カップ設定 (100g)
                 </button>
                 <button
                   type="button"
@@ -546,9 +573,22 @@ export default function RecipeEditorForm({
                       {isBulk ? '本 (2L)' : '個'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    {isBulk ? '※2L容器 × 3本 ＝ 6リットル' : '※120mlカップ × 65個'}
-                  </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-slate-500 mt-1">
+                    <span>
+                      {isBulk
+                        ? '※2L容器 × 3本 ＝ 6リットル'
+                        : `※100gカップ × ${cupQuantity}個 ＝ ${(cupQuantity * 100 / 1000).toFixed(1)}kg`}
+                    </span>
+                    {!isBulk && totalIngredientWeight > 0 && Math.round(totalIngredientWeight / 100) !== cupQuantity && (
+                      <button
+                        type="button"
+                        onClick={() => setCupQuantity(Math.round(totalIngredientWeight / 100))}
+                        className="text-amber-800 hover:text-amber-900 bg-amber-100/80 hover:bg-amber-100 px-2 py-0.5 rounded text-[10px] font-medium transition-colors cursor-pointer self-start sm:self-auto"
+                      >
+                        配合総量({totalIngredientWeight.toLocaleString()}g)から100g/個で自動反映 ({Math.round(totalIngredientWeight / 100)}個)
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Labor Cost */}
@@ -662,9 +702,25 @@ export default function RecipeEditorForm({
               {/* Wholesale / Retail Price Row for Current Tab */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    {isBulk ? '2Lバルク 想定卸売価格 (税込)' : 'カップ 想定卸売価格 (税込)'} *
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-slate-500" />
+                      <span>{isBulk ? '2Lバルク 想定卸売価格 (税込)' : 'カップ 想定卸売価格 (税込)'} *</span>
+                    </label>
+                    {uniformPricing && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isBulk) setBulkWholesalePrice(uniformPricing.bulk_wholesale_price);
+                          else setCupWholesalePrice(uniformPricing.cup_wholesale_price);
+                        }}
+                        className="text-[10px] text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded transition-colors cursor-pointer"
+                        title="一律設定の卸価格を反映"
+                      >
+                        一律設定 (¥{(isBulk ? uniformPricing.bulk_wholesale_price : uniformPricing.cup_wholesale_price).toLocaleString()}) を適用
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">¥</span>
                     <input
@@ -679,12 +735,30 @@ export default function RecipeEditorForm({
                       className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
                     />
                   </div>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    ※全フレーバー一律の卸価格設定です（レシピ一覧・サマリー上部からも一括変更可能）
+                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    {isBulk ? '2Lバルク 想定小売価格 (参考)' : 'カップ 想定小売価格 (店頭)'}
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700">
+                      {isBulk ? '2Lバルク 想定小売価格 (参考)' : 'カップ 想定小売価格 (店頭)'}
+                    </label>
+                    {uniformPricing && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isBulk) setBulkRetailPrice(uniformPricing.bulk_retail_price);
+                          else setCupRetailPrice(uniformPricing.cup_retail_price);
+                        }}
+                        className="text-[10px] text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2 py-0.5 rounded transition-colors cursor-pointer"
+                        title="一律設定の参考小売価格を反映"
+                      >
+                        一律設定 (¥{(isBulk ? uniformPricing.bulk_retail_price : uniformPricing.cup_retail_price).toLocaleString()}) を適用
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">¥</span>
                     <input

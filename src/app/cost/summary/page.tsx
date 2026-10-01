@@ -20,10 +20,12 @@ import {
   HelpCircle,
   Sparkles,
   ArrowLeft,
-  Info
+  Info,
+  Tag,
+  CheckCircle2
 } from 'lucide-react';
-import { Recipe, Material, RecipeCostBreakdown, PackageType } from '@/types/cost';
-import { getRecipes, getMaterials, calculateRecipeCost } from '@/lib/cost-api';
+import { Recipe, Material, RecipeCostBreakdown, PackageType, UniformPricingConfig } from '@/types/cost';
+import { getRecipes, getMaterials, calculateRecipeCost, getUniformPricing, saveUniformPricing, DEFAULT_UNIFORM_PRICING } from '@/lib/cost-api';
 import TutorialModal from '@/components/cost/TutorialModal';
 
 export default function CostSummaryPage() {
@@ -32,24 +34,45 @@ export default function CostSummaryPage() {
   const [loading, setLoading] = useState(true);
   const [activePackageType, setActivePackageType] = useState<PackageType>('cup');
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [uniformPricing, setUniformPricing] = useState<UniformPricingConfig>(DEFAULT_UNIFORM_PRICING);
+  const [priceSavedNotice, setPriceSavedNotice] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const [r, m] = await Promise.all([getRecipes(), getMaterials()]);
+      const [r, m, p] = await Promise.all([getRecipes(), getMaterials(), getUniformPricing()]);
       setRecipes(r);
       setMaterials(m);
+      setUniformPricing(p);
       setLoading(false);
     }
     load();
   }, []);
 
   const isBulk = activePackageType === 'bulk';
-  const unitLabel = isBulk ? '1本 (2L)' : '1個 (120ml)';
+  const unitLabel = isBulk ? '1本 (2L)' : '1個 (100g)';
   const shortUnit = isBulk ? '本' : '個';
 
+  const handlePriceChange = async (type: PackageType, newPrice: number) => {
+    const val = Number.isNaN(newPrice) ? 0 : Math.max(0, newPrice);
+    const updated = type === 'bulk'
+      ? { ...uniformPricing, bulk_wholesale_price: val }
+      : { ...uniformPricing, cup_wholesale_price: val };
+    setUniformPricing(updated);
+    await saveUniformPricing(updated);
+    setPriceSavedNotice(true);
+    setTimeout(() => setPriceSavedNotice(false), 2000);
+  };
+
   const breakdowns = useMemo(() => {
-    return recipes.map(r => calculateRecipeCost(r, materials, activePackageType));
-  }, [recipes, materials, activePackageType]);
+    const currentWholesale = isBulk
+      ? uniformPricing.bulk_wholesale_price
+      : uniformPricing.cup_wholesale_price;
+    const currentRetail = isBulk
+      ? uniformPricing.bulk_retail_price
+      : uniformPricing.cup_retail_price;
+
+    return recipes.map(r => calculateRecipeCost(r, materials, activePackageType, currentWholesale, currentRetail));
+  }, [recipes, materials, activePackageType, uniformPricing, isBulk]);
 
   // Chart 1: Cost Breakdown Stacked Bar Chart data
   const stackedChartData = useMemo(() => {
@@ -129,7 +152,7 @@ export default function CostSummaryPage() {
                 : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            <span>🍨 個食カップ (120ml)</span>
+            <span>🍨 個食カップ (100g)</span>
             <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${!isBulk ? 'bg-amber-100 text-amber-900' : 'bg-slate-200 text-slate-600'}`}>
               65個 / 仕込み
             </span>
@@ -152,6 +175,151 @@ export default function CostSummaryPage() {
 
         <div className="text-xs text-slate-500 font-medium">
           表示基準: <span className="font-semibold text-slate-800">{unitLabel} あたり</span>
+        </div>
+      </div>
+
+      {/* Uniform Price Setting Card (全フレーバー一律 想定卸価格 設定パネル) */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-slate-900 text-white">
+              <Tag className="w-4 h-4" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm text-slate-900">販売価格の一律設定（想定卸価格）</span>
+                <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                  全10フレーバー共通連動
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                直接数値を入力すると、下の全グラフおよび平均粗利率・原価サマリーが即座に再試算されます。
+              </p>
+            </div>
+          </div>
+
+          {priceSavedNotice && (
+            <div className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200/70 shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>一律価格を更新しました（全レシピに反映）</span>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3.5">
+          {/* Cup Wholesale Input */}
+          <div className={`p-3.5 rounded-xl border transition-all ${
+            !isBulk ? 'bg-amber-50/40 border-amber-300 ring-2 ring-amber-400/20' : 'bg-slate-50/60 border-slate-200/80'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🍨</span>
+                <span className="text-xs font-bold text-slate-800">個食カップ (100g) 一律 想定卸価格</span>
+              </div>
+              {!isBulk && (
+                <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
+                  現在選択中
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono font-bold text-slate-400 text-sm">¥</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={10}
+                  value={uniformPricing.cup_wholesale_price || ''}
+                  onChange={(e) => handlePriceChange('cup', Number(e.target.value))}
+                  placeholder="340"
+                  className="w-full pl-8 pr-12 py-2 bg-white border border-slate-200 rounded-xl text-base font-bold font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/15 focus:border-slate-400 shadow-2xs"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">/ 個</span>
+              </div>
+              
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handlePriceChange('cup', Math.max(0, uniformPricing.cup_wholesale_price - 10))}
+                  className="px-2.5 py-2 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
+                  title="10円下げる"
+                >
+                  -10
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePriceChange('cup', uniformPricing.cup_wholesale_price + 10)}
+                  className="px-2.5 py-2 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
+                  title="10円上げる"
+                >
+                  +10
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2">
+              <span>参考店頭小売価格: ¥{uniformPricing.cup_retail_price.toLocaleString()}</span>
+              <span className="text-slate-400">（容量: 100g基準）</span>
+            </div>
+          </div>
+
+          {/* Bulk Wholesale Input */}
+          <div className={`p-3.5 rounded-xl border transition-all ${
+            isBulk ? 'bg-emerald-50/40 border-emerald-300 ring-2 ring-emerald-400/20' : 'bg-slate-50/60 border-slate-200/80'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-base">📦</span>
+                <span className="text-xs font-bold text-slate-800">業務用 2Lバルク 一律 想定卸価格</span>
+              </div>
+              {isBulk && (
+                <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
+                  現在選択中
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono font-bold text-slate-400 text-sm">¥</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={100}
+                  value={uniformPricing.bulk_wholesale_price || ''}
+                  onChange={(e) => handlePriceChange('bulk', Number(e.target.value))}
+                  placeholder="4320"
+                  className="w-full pl-8 pr-16 py-2 bg-white border border-slate-200 rounded-xl text-base font-bold font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/15 focus:border-slate-400 shadow-2xs"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">/ 本 (2L)</span>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handlePriceChange('bulk', Math.max(0, uniformPricing.bulk_wholesale_price - 100))}
+                  className="px-2.5 py-2 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
+                  title="100円下げる"
+                >
+                  -100
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePriceChange('bulk', uniformPricing.bulk_wholesale_price + 100)}
+                  className="px-2.5 py-2 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
+                  title="100円上げる"
+                >
+                  +100
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2">
+              <span>参考メニュー想定価格: ¥{uniformPricing.bulk_retail_price.toLocaleString()}</span>
+              <span className="text-slate-400">（容量: 2L角型容器）</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -267,7 +435,7 @@ export default function CostSummaryPage() {
         <div className="p-4 border-b border-slate-100 font-bold text-xs text-slate-800 flex items-center justify-between">
           <span>全10種 原価・マージン詳細一覧 ({unitLabel})</span>
           <span className="text-[11px] font-normal text-slate-500">
-            {isBulk ? '仕込み1回 = 2L × 3本 (計6L)' : '仕込み1回 = 120ml × 65個'}
+            {isBulk ? '仕込み1回 = 2L × 3本 (計6L)' : '仕込み1回 = 100g × 65個 (計6.5kg)'}
           </span>
         </div>
         <div className="overflow-x-auto">

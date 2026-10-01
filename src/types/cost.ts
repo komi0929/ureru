@@ -12,7 +12,7 @@ export type PackageType = 'cup' | 'bulk'; // 'cup' (個食カップ) | 'bulk' (�
 export interface Material {
   id: string;
   category: MaterialCategory; // 'ingredient' (材料) | 'packaging' (資材)
-  name: string;               // 品名（例: 国産無調整豆乳、120mlカップ、2Lバルク容器）
+  name: string;               // 品名（例: 国産無調整豆乳、100gカップ、2Lバルク容器）
   supplier?: string;          // 仕入れ先
   package_unit_name: string;  // 仕入れ単位名（例: 1袋、1缶、1箱、1ケース）
   package_quantity: number;   // 内容量・入数（例: 1000g, 1000ml, 500個）
@@ -104,6 +104,7 @@ export interface RecipeCostBreakdown {
   }>;
   total_ingredient_cost: number;  // 1仕込み材料費合計
   unit_ingredient_cost: number;   // 1個/1本あたり材料費
+  total_ingredient_weight?: number; // 1仕込み材料総重量 (gまたはml)
 
   // 資材費
   packaging_items: Array<{
@@ -143,3 +144,14 @@ export interface RecipeCostBreakdown {
     margin_ratio: number;         // 粗利率 (%)
   };
 }
+
+/**
+ * 一律販売価格設定 (カップ & バルク共通)
+ */
+export interface UniformPricingConfig {
+  cup_wholesale_price: number;   // カップ想定卸売価格 (一律)
+  bulk_wholesale_price: number;  // バルク想定卸売価格 (一律)
+  cup_retail_price: number;      // カップ想定小売価格 (一律)
+  bulk_retail_price: number;     // バルク想定小売価格 (一律)
+}
+

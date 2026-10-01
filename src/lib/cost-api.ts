@@ -1,4 +1,4 @@
-import { Material, Recipe, RecipeCostBreakdown, PackageType, PackageConfig } from '@/types/cost';
+import { Material, Recipe, RecipeCostBreakdown, PackageType, PackageConfig, UniformPricingConfig } from '@/types/cost';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 // ============================================================
@@ -418,7 +418,7 @@ export const INITIAL_MATERIALS: Material[] = [
   {
     id: 'mat-pkg-001',
     category: 'packaging',
-    name: '120ml バイオプラ紙アイスカップ (SoyStories特注ロゴ)',
+    name: '100g バイオプラ紙アイスカップ (SoyStories特注ロゴ)',
     supplier: '東罐興業',
     package_unit_name: '1箱 (1000個)',
     package_quantity: 1000,
@@ -446,7 +446,7 @@ export const INITIAL_MATERIALS: Material[] = [
   {
     id: 'mat-pkg-003',
     category: 'packaging',
-    name: '120mlカップ用 紙製オーバーキャップ (外蓋)',
+    name: '100gカップ用 紙製オーバーキャップ (外蓋)',
     supplier: '東罐興業',
     package_unit_name: '1ケース (1000個)',
     package_quantity: 1000,
@@ -547,8 +547,8 @@ export const COMMON_BULK_PACKAGINGS = [
   { id: 'pkg-b2', material_id: 'mat-pkg-bulk-002', quantity_per_unit: 1 },
 ];
 
-// ヘルパー: デフォルト形態別設定を生成
-function createDefaultConfigs(cupWholesale: number, cupRetail: number, bulkWholesale = 4320, bulkRetail = 6000) {
+// ヘルパー: デフォルト形態別設定を生成（一律販売価格基準）
+function createDefaultConfigs(cupWholesale = 340, cupRetail = 520, bulkWholesale = 4320, bulkRetail = 6000) {
   return {
     cup_config: {
       package_type: 'cup' as PackageType,
@@ -572,7 +572,7 @@ function createDefaultConfigs(cupWholesale: number, cupRetail: number, bulkWhole
 }
 
 // ============================================================
-// 本番用 レシピ10種データ (カップ & バルク両対応)
+// 本番用 レシピ10種データ (カップ & バルク両対応・一律価格標準)
 // ============================================================
 
 export const INITIAL_RECIPES: Recipe[] = [
@@ -582,7 +582,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【アールグレイ】',
     category: '米粉アイス',
     description: 'ベルガモット香るアールグレイシロップと米粉のなめらかな口当たり。白みそが深みをプラス。',
-    ...createDefaultConfigs(340, 520),
+    ...createDefaultConfigs(),
     ingredients: [
       { id: 'rg-1', material_id: 'mat-ing-earl-grey-syrup', amount: 1500, unit: 'g' },
       { id: 'rg-2', material_id: 'mat-ing-soy-milk', amount: 3500, unit: 'ml' },
@@ -601,7 +601,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【りんご】',
     category: '米粉アイス',
     description: '100%果汁「おいしすぎるりんご」を贅沢に使用した爽やかな米粉ソルベアイス。',
-    ...createDefaultConfigs(330, 500),
+    ...createDefaultConfigs(),
     ingredients: [
       { id: 'ra-1', material_id: 'mat-ing-oishisugiru-apple', amount: 4000, unit: 'ml' },
       { id: 'ra-2', material_id: 'mat-ing-beet-syrup', amount: 1650, unit: 'g' },
@@ -619,7 +619,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【バニラ】',
     category: '米粉アイス',
     description: '有機豆乳と豆乳ホイップ、ココナッツパウダーでコクを極めたシグネチャーバニラ。',
-    ...createDefaultConfigs(320, 480),
+    ...createDefaultConfigs(),
     ingredients: [
       { id: 'rv-1', material_id: 'mat-ing-soy-milk', amount: 4000, unit: 'ml' },
       { id: 'rv-2', material_id: 'mat-ing-beet-syrup', amount: 1100, unit: 'g' },
@@ -638,7 +638,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【ショコラ】',
     category: '米粉アイス',
     description: 'アーモンドミルクベースにカカオマス、ココアバター、ココアパウダーをブレンドした濃厚ショコラ。',
-    ...createDefaultConfigs(360, 540),
+    ...createDefaultConfigs(),
     ingredients: [
       { id: 'rc-1', material_id: 'mat-ing-almond-milk', amount: 3500, unit: 'ml' },
       { id: 'rc-2', material_id: 'mat-ing-beet-syrup', amount: 1680, unit: 'g' },
@@ -659,7 +659,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【ドラゴンフルーツ】',
     category: '米粉アイス',
     description: '鮮烈なマゼンタピンクが映えるドラゴンフルーツピューレとパインジュースのトロピカルアイス。',
-    ...createDefaultConfigs(350, 520),
+    ...createDefaultConfigs(),
     ingredients: [
       { id: 'rd-1', material_id: 'mat-ing-pine-juice', amount: 673, unit: 'ml' },
       { id: 'rd-2', material_id: 'mat-ing-coconut-cream', amount: 561, unit: 'g' },
@@ -681,7 +681,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【ほうじ】',
     category: '米粉アイス',
     description: '香ばしい京都産ほうじ茶パウダーに濃縮甘酒ときび砂糖、白みそを合わせた和の絶品クラフト。',
-    ...createDefaultConfigs(330, 500),
+    ...createDefaultConfigs(),
     ingredients: [
       { id: 'rh-1', material_id: 'mat-ing-soy-milk', amount: 2000, unit: 'ml' },
       { id: 'rh-2', material_id: 'mat-ing-amazake', amount: 2000, unit: 'g' },
@@ -702,7 +702,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【ミックスベリー】',
     category: '米粉アイス',
     description: 'ストロベリーとフランボワーズ（木苺）のダブルベリーピューレが織りなす甘酸っぱい濃厚アイス。',
-    ...createDefaultConfigs(350, 520),
+    ...createDefaultConfigs(),
     ingredients: [
       { id: 'rm-1', material_id: 'mat-ing-framboise-puree', amount: 300, unit: 'g' },
       { id: 'rm-2', material_id: 'mat-ing-beet-syrup', amount: 1950, unit: 'g' },
@@ -723,7 +723,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【抹茶】',
     category: '米粉アイス',
     description: '京都宇治の石臼挽き有機抹茶にクロレラを合わせ、美しい緑と上品なほろ苦さを引き出した逸品。',
-    ...createDefaultConfigs(350, 520),
+    ...createDefaultConfigs(),
     ingredients: [
       { id: 'rmt-1', material_id: 'mat-ing-soy-milk', amount: 2000, unit: 'ml' },
       { id: 'rmt-2', material_id: 'mat-ing-amazake', amount: 2000, unit: 'g' },
@@ -745,7 +745,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【もも】',
     category: '米粉アイス',
     description: '100%果汁「おいしすぎるもも」を使用した、みずみずしい桃のアロマ広がる極上フルーティーアイス。',
-    ...createDefaultConfigs(340, 520),
+    ...createDefaultConfigs(),
     ingredients: [
       { id: 'rp-1', material_id: 'mat-ing-oishisugiru-peach', amount: 4000, unit: 'ml' },
       { id: 'rp-2', material_id: 'mat-ing-beet-syrup', amount: 1650, unit: 'g' },
@@ -763,7 +763,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     name: '米粉アイス【マンゴー】',
     category: '米粉アイス',
     description: '濃厚なアップルマンゴーピューレにココナッツとレモンの酸味を加えた、リッチでコク深いマンゴーアイス。',
-    ...createDefaultConfigs(360, 540),
+    ...createDefaultConfigs(),
     ingredients: [
       { id: 'rmg-1', material_id: 'mat-ing-mango-puree', amount: 3000, unit: 'g' },
       { id: 'rmg-2', material_id: 'mat-ing-water', amount: 1000, unit: 'g' },
@@ -778,22 +778,90 @@ export const INITIAL_RECIPES: Recipe[] = [
 ];
 
 // ============================================================
-// ローカルストレージ キー (v3 カップ & バルク両対応)
+// 一律販売価格設定 (カップ & バルク共通)
 // ============================================================
-const STORAGE_KEY_MATERIALS = 'soystories_cost_materials_v3';
-const STORAGE_KEY_RECIPES = 'soystories_cost_recipes_v3';
+export const DEFAULT_UNIFORM_PRICING: UniformPricingConfig = {
+  cup_wholesale_price: 340,
+  bulk_wholesale_price: 4320,
+  cup_retail_price: 520,
+  bulk_retail_price: 6000,
+};
+
+const STORAGE_KEY_UNIFORM_PRICING = 'soystories_uniform_pricing_v1';
+
+export async function getUniformPricing(): Promise<UniformPricingConfig> {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem(STORAGE_KEY_UNIFORM_PRICING);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.cup_wholesale_price === 'number') {
+          return { ...DEFAULT_UNIFORM_PRICING, ...parsed };
+        }
+      } catch {
+        // fallback
+      }
+    }
+  }
+  return { ...DEFAULT_UNIFORM_PRICING };
+}
+
+export async function saveUniformPricing(pricing: UniformPricingConfig): Promise<UniformPricingConfig> {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY_UNIFORM_PRICING, JSON.stringify(pricing));
+  }
+  const currentRecipes = await getRecipes();
+  const updatedRecipes = currentRecipes.map(r => ({
+    ...r,
+    target_wholesale_price: pricing.cup_wholesale_price,
+    target_retail_price: pricing.cup_retail_price,
+    cup_config: {
+      ...(r.cup_config || {}),
+      package_type: 'cup' as const,
+      unit_name: '個',
+      target_quantity: r.cup_config?.target_quantity || r.target_quantity || 65,
+      labor_cost: r.cup_config?.labor_cost ?? r.labor_cost ?? 3000,
+      packagings: r.cup_config?.packagings || r.packagings || [...COMMON_CUP_PACKAGINGS],
+      target_wholesale_price: pricing.cup_wholesale_price,
+      target_retail_price: pricing.cup_retail_price,
+    },
+    bulk_config: {
+      ...(r.bulk_config || {}),
+      package_type: 'bulk' as const,
+      unit_name: '本 (2L)',
+      target_quantity: r.bulk_config?.target_quantity || 3,
+      labor_cost: r.bulk_config?.labor_cost ?? 3600,
+      packagings: r.bulk_config?.packagings || [...COMMON_BULK_PACKAGINGS],
+      target_wholesale_price: pricing.bulk_wholesale_price,
+      target_retail_price: pricing.bulk_retail_price,
+    },
+  }));
+  inMemoryRecipes = updatedRecipes;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY_RECIPES, JSON.stringify(updatedRecipes));
+  }
+  return pricing;
+}
+
+// ============================================================
+// ローカルストレージ キー (v4: カップ100g基準 & バルク両対応)
+// ============================================================
+const STORAGE_KEY_MATERIALS = 'soystories_cost_materials_v4';
+const STORAGE_KEY_RECIPES = 'soystories_cost_recipes_v4';
 
 // メモリキャッシュ
 let inMemoryMaterials: Material[] = [...INITIAL_MATERIALS];
 let inMemoryRecipes: Recipe[] = [...INITIAL_RECIPES];
 
 /**
- * 原価計算ロジック（カップ / バルク両対応）
+ * 原価計算ロジック（カップ / バルク両対応・一律販売価格対応）
  */
 export function calculateRecipeCost(
   recipe: Recipe,
   materials: Material[],
-  packageType: PackageType = 'cup'
+  packageType: PackageType = 'cup',
+  uniformWholesalePrice?: number,
+  uniformRetailPrice?: number
 ): RecipeCostBreakdown {
   const materialMap = new Map<string, Material>(materials.map(m => [m.id, m]));
 
@@ -822,11 +890,13 @@ export function calculateRecipeCost(
 
   // 1. 材料費の計算（原材料は共通）
   let totalIngredientCost = 0;
+  let totalIngredientWeight = 0;
   const ingredientItems = recipe.ingredients.map(item => {
     const material = materialMap.get(item.material_id);
     const unitCost = material ? material.unit_cost : 0;
     const cost = item.amount * unitCost;
     totalIngredientCost += cost;
+    totalIngredientWeight += Number(item.amount) || 0;
 
     return {
       material: material || {
@@ -900,12 +970,16 @@ export function calculateRecipeCost(
   const laborRatio = totalManufacturingCost > 0 ? (totalLaborCost / totalManufacturingCost) * 100 : 0;
 
   // 6. 卸・小売シミュレーション
-  const wholesalePrice = config.target_wholesale_price || 0;
+  const wholesalePrice = uniformWholesalePrice !== undefined
+    ? uniformWholesalePrice
+    : (config.target_wholesale_price || 0);
   const wholesaleCostRatio = wholesalePrice > 0 ? (unitManufacturingCost / wholesalePrice) * 100 : 0;
   const wholesaleGrossMargin = wholesalePrice - unitManufacturingCost;
   const wholesaleMarginRatio = wholesalePrice > 0 ? (wholesaleGrossMargin / wholesalePrice) * 100 : 0;
 
-  const retailPrice = config.target_retail_price || 0;
+  const retailPrice = uniformRetailPrice !== undefined
+    ? uniformRetailPrice
+    : (config.target_retail_price || 0);
   const retailCostRatio = retailPrice > 0 ? (unitManufacturingCost / retailPrice) * 100 : 0;
   const retailGrossMargin = retailPrice - unitManufacturingCost;
   const retailMarginRatio = retailPrice > 0 ? (retailGrossMargin / retailPrice) * 100 : 0;
@@ -918,6 +992,7 @@ export function calculateRecipeCost(
     ingredient_items: ingredientItems,
     total_ingredient_cost: totalIngredientCost,
     unit_ingredient_cost: unitIngredientCost,
+    total_ingredient_weight: totalIngredientWeight,
     packaging_items: packagingItems,
     unit_packaging_cost: unitPackagingCost,
     total_packaging_cost: totalPackagingCost,
@@ -949,7 +1024,25 @@ export function calculateRecipeCost(
 
 export async function getMaterials(): Promise<Material[]> {
   if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem(STORAGE_KEY_MATERIALS);
+    let saved = localStorage.getItem(STORAGE_KEY_MATERIALS);
+    if (!saved) {
+      const oldV3 = localStorage.getItem('soystories_cost_materials_v3');
+      if (oldV3) {
+        try {
+          const parsed = JSON.parse(oldV3);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const migrated = parsed.map((m: Material) => ({
+              ...m,
+              name: m.name.replace(/120ml/g, '100g'),
+            }));
+            localStorage.setItem(STORAGE_KEY_MATERIALS, JSON.stringify(migrated));
+            saved = JSON.stringify(migrated);
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -1054,7 +1147,21 @@ export async function deleteMaterial(id: string): Promise<boolean> {
 
 export async function getRecipes(): Promise<Recipe[]> {
   if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem(STORAGE_KEY_RECIPES);
+    let saved = localStorage.getItem(STORAGE_KEY_RECIPES);
+    if (!saved) {
+      const oldV3 = localStorage.getItem('soystories_cost_recipes_v3');
+      if (oldV3) {
+        try {
+          const parsed = JSON.parse(oldV3);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            localStorage.setItem(STORAGE_KEY_RECIPES, JSON.stringify(parsed));
+            saved = JSON.stringify(parsed);
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -1188,10 +1295,11 @@ export async function resetToDefaultPreset(): Promise<void> {
   inMemoryMaterials = [...INITIAL_MATERIALS];
   inMemoryRecipes = [...INITIAL_RECIPES];
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('soystories_cost_materials_v1');
-    localStorage.removeItem('soystories_cost_recipes_v1');
-    localStorage.removeItem('soystories_cost_materials_v2');
-    localStorage.removeItem('soystories_cost_recipes_v2');
+    ['v1', 'v2', 'v3'].forEach(v => {
+      localStorage.removeItem(`soystories_cost_materials_${v}`);
+      localStorage.removeItem(`soystories_cost_recipes_${v}`);
+    });
+    localStorage.removeItem(STORAGE_KEY_UNIFORM_PRICING);
     localStorage.setItem(STORAGE_KEY_MATERIALS, JSON.stringify(INITIAL_MATERIALS));
     localStorage.setItem(STORAGE_KEY_RECIPES, JSON.stringify(INITIAL_RECIPES));
   }

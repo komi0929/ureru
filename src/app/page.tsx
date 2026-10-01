@@ -14,7 +14,8 @@ import {
   HelpCircle,
   Package,
   Layers,
-  Info
+  Info,
+  Store
 } from 'lucide-react';
 import TutorialModal from '@/components/cost/TutorialModal';
 
@@ -93,43 +94,43 @@ export default function PortalHomePage() {
           </button>
         </div>
 
-        {/* 2 Main Cards (Clean & Refined like Google Workspace / Stripe) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 w-full max-w-4xl">
+        {/* 3 Main Cards (Google Workspace / Stripe style) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl">
           
           {/* Card 1: 営業促進 (URERU) */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
             <div>
               {/* Card Header Icon & Badge */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-                  <Rocket className="w-6 h-6" />
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                  <Rocket className="w-5 h-5" />
                 </div>
-                <span className="text-xs font-semibold text-emerald-700 bg-emerald-50/80 px-2.5 py-1 rounded-md border border-emerald-200/50">
-                  営業促進ツール
+                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50/80 px-2 py-0.5 rounded-md border border-emerald-200/50">
+                  B2B営業促進
                 </span>
               </div>
 
               {/* Title & Description */}
-              <h2 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-emerald-700 transition-colors">
-                営業促進 <span className="text-sm font-semibold text-slate-400 font-mono ml-1">URERU</span>
+              <h2 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-emerald-700 transition-colors">
+                営業促進 <span className="text-xs font-semibold text-slate-400 font-mono ml-1">URERU</span>
               </h2>
-              <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                Instagramからの見込み店舗抽出から、AIによるパーソナライズDM送信、無料サンプルのカンバン配送管理、受発注・請求書発行までをワンストップで支援。
+              <p className="text-xs text-slate-500 leading-relaxed mb-5">
+                見込みカフェ抽出からAIパーソナライズDM送信、無料サンプルのカンバン管理、受発注・請求書発行を自動化。
               </p>
 
               {/* Feature List */}
-              <div className="space-y-2.5 mb-8 border-t border-slate-100 pt-5">
-                <div className="flex items-center gap-2.5 text-xs text-slate-600">
+              <div className="space-y-2 mb-6 border-t border-slate-100 pt-4 text-[11px] text-slate-600">
+                <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                  <span>店舗自動収集 & AIパーソナライズDM生成</span>
+                  <span>店舗自動収集 & AI-DM生成</span>
                 </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-600">
+                <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                  <span>サンプル送付 5段階ドラッグ＆ドロップ カンバン</span>
+                  <span>サンプル送付 5段階カンバン</span>
                 </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-600">
+                <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                  <span>受発注履歴管理 ＆ 請求書PDF自動出力</span>
+                  <span>受発注 ＆ 請求書PDF自動出力</span>
                 </div>
               </div>
             </div>
@@ -138,59 +139,55 @@ export default function PortalHomePage() {
             <div>
               <Link
                 href="/dashboard"
-                className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-xs group-hover:bg-emerald-600 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-xs group-hover:bg-emerald-600 cursor-pointer"
               >
-                <span>営業促進ツールを開く</span>
+                <span>営業促進を開く</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </Link>
-
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                <span>クイックアクセス:</span>
-                <div className="flex items-center gap-2 font-medium">
-                  <Link href="/sales" className="hover:text-slate-800 transition-colors">営業モード</Link>
-                  <span>·</span>
-                  <Link href="/discover" className="hover:text-slate-800 transition-colors">店舗収集</Link>
-                  <span>·</span>
-                  <Link href="/leads" className="hover:text-slate-800 transition-colors">リード管理</Link>
-                </div>
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                <Link href="/sales" className="hover:text-slate-800 transition-colors">営業モード</Link>
+                <span>·</span>
+                <Link href="/discover" className="hover:text-slate-800 transition-colors">店舗収集</Link>
+                <span>·</span>
+                <Link href="/leads" className="hover:text-slate-800 transition-colors">リード管理</Link>
               </div>
             </div>
           </div>
 
           {/* Card 2: レシピ原価管理 (COST LAB) */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
             <div>
               {/* Card Header Icon & Badge */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-                  <Calculator className="w-6 h-6" />
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                  <Calculator className="w-5 h-5" />
                 </div>
-                <span className="text-xs font-semibold text-amber-900 bg-amber-50/80 px-2.5 py-1 rounded-md border border-amber-200/50">
-                  レシピ原価管理
+                <span className="text-[11px] font-semibold text-amber-900 bg-amber-50/80 px-2 py-0.5 rounded-md border border-amber-200/50">
+                  製造原価管理
                 </span>
               </div>
 
               {/* Title & Description */}
-              <h2 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-amber-700 transition-colors">
-                レシピ原価管理 <span className="text-sm font-semibold text-slate-400 font-mono ml-1">COST LAB</span>
+              <h2 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-amber-700 transition-colors">
+                レシピ原価管理 <span className="text-xs font-semibold text-slate-400 font-mono ml-1">COST LAB</span>
               </h2>
-              <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                原材料（g / ml）配合、専用資材代、仕込み人件費から1個・1本あたりの製造原価を精密計算。想定卸売価格・小売価格における粗利マージンをリアルタイムシミュレーション。
+              <p className="text-xs text-slate-500 leading-relaxed mb-5">
+                原材料配合・資材・人件費から100gカップ・2Lバルクの原価を精密計算。想定卸価格を一律設定し粗利を試算。
               </p>
 
               {/* Feature List */}
-              <div className="space-y-2.5 mb-8 border-t border-slate-100 pt-5">
-                <div className="flex items-center gap-2.5 text-xs text-slate-600 font-medium">
+              <div className="space-y-2 mb-6 border-t border-slate-100 pt-4 text-[11px] text-slate-600">
+                <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                  <span className="text-slate-900">🍨 個食カップ (120ml) ⇔ 📦 2Lバルクの即座切替</span>
+                  <span>🍨 100gカップ ⇔ 📦 2Lバルク切替</span>
                 </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-600">
+                <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                  <span>米粉アイス本番10フレーバーの実レシピ・手書き修正反映</span>
+                  <span>米粉アイス10フレーバー本番レシピ</span>
                 </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-600">
+                <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                  <span>原材料29種＆包装資材マスター（税込1g・1個単価自動算出）</span>
+                  <span>原材料29種＆包装資材マスター</span>
                 </div>
               </div>
             </div>
@@ -199,21 +196,78 @@ export default function PortalHomePage() {
             <div>
               <Link
                 href="/cost/recipes"
-                className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-xs group-hover:bg-amber-600 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-xs group-hover:bg-amber-600 cursor-pointer"
               >
                 <span>レシピ原価管理を開く</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </Link>
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                <Link href="/cost/recipes" className="hover:text-slate-800 transition-colors">レシピ一覧</Link>
+                <span>·</span>
+                <Link href="/cost/materials" className="hover:text-slate-800 transition-colors">材料マスター</Link>
+                <span>·</span>
+                <Link href="/cost/summary" className="hover:text-slate-800 transition-colors">原価分析</Link>
+              </div>
+            </div>
+          </div>
 
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                <span>クイックアクセス:</span>
-                <div className="flex items-center gap-2 font-medium">
-                  <Link href="/cost/recipes" className="hover:text-slate-800 transition-colors">レシピ一覧</Link>
-                  <span>·</span>
-                  <Link href="/cost/materials" className="hover:text-slate-800 transition-colors">材料マスター</Link>
-                  <span>·</span>
-                  <Link href="/cost/summary" className="hover:text-slate-800 transition-colors">原価分析</Link>
+          {/* Card 3: 直営店舗 経営分析 (STORE LAB) - 新設！ */}
+          <div className="bg-white rounded-2xl border-2 border-amber-300 p-6 shadow-xs hover:shadow-md hover:border-amber-400 transition-all duration-200 flex flex-col justify-between group relative overflow-hidden">
+            <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500 to-amber-400 text-slate-950 font-bold text-[9px] px-3 py-0.5 rounded-bl-lg tracking-wider">
+              NEW MODE
+            </div>
+
+            <div>
+              {/* Card Header Icon & Badge */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-700">
+                  <Store className="w-5 h-5" />
                 </div>
+                <span className="text-[11px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200">
+                  直営店舗 経営分析
+                </span>
+              </div>
+
+              {/* Title & Description */}
+              <h2 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-amber-600 transition-colors">
+                店舗経営分析 <span className="text-xs font-semibold text-slate-400 font-mono ml-1">STORE LAB</span>
+              </h2>
+              <p className="text-xs text-slate-500 leading-relaxed mb-5">
+                AirレジCSVをドロップするだけで3年半の季節トレンド・商品盛衰・成長鈍化の真因（客数・買上点数・看板商品の踊り場）を科学的に特定。
+              </p>
+
+              {/* Feature List */}
+              <div className="space-y-2 mb-6 border-t border-slate-100 pt-4 text-[11px] text-slate-600">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                  <span>Airレジ3大CSV 自動判別インポート</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                  <span>冷菓⇔焼菓子 12ヶ月交代サイクル分析</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                  <span>成長鈍化 要因分解 ＆ 4象限診断</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div>
+              <Link
+                href="/store"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-all shadow-xs cursor-pointer"
+              >
+                <span>店舗経営分析を開く</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                <Link href="/store" className="hover:text-slate-800 transition-colors">総合診断</Link>
+                <span>·</span>
+                <Link href="/store/seasonality" className="hover:text-slate-800 transition-colors">季節トレンド</Link>
+                <span>·</span>
+                <Link href="/store/import" className="hover:text-slate-800 transition-colors">CSV読込</Link>
               </div>
             </div>
           </div>

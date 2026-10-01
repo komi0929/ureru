@@ -10,9 +10,11 @@ import {
   PlusCircle, 
   PieChart, 
   ArrowLeft,
+  ArrowRight,
   Zap,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Store
 } from 'lucide-react';
 import { resetToDefaultPreset } from '@/lib/cost-api';
 import TutorialModal from '@/components/cost/TutorialModal';
@@ -118,6 +120,17 @@ export default function CostSidebar() {
             <RotateCcw className="w-3 h-3 text-slate-400" />
             <span>本番データを再読込</span>
           </button>
+
+          <Link
+            href="/store"
+            className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-slate-800 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200/80 shadow-2xs group cursor-pointer"
+          >
+            <div className="flex items-center gap-1.5">
+              <span>🏪</span>
+              <span>店舗経営分析 (STORE LAB)</span>
+            </div>
+            <ArrowRight className="w-3.5 h-3.5 text-amber-700 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
 
         <div className="flex items-center gap-2.5 px-2 py-1">
           <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs shrink-0">

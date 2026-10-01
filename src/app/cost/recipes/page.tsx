@@ -17,17 +17,17 @@ import {
   Layers, 
   ArrowRight, 
   Copy, 
-  Sliders, 
   Package, 
   Check,
   HelpCircle,
   X,
   ChevronsUpDown,
   CheckCircle2,
-  PieChart
+  PieChart,
+  Tag
 } from 'lucide-react';
-import { Recipe, Material, RecipeCostBreakdown, PackageType } from '@/types/cost';
-import { getRecipes, getMaterials, calculateRecipeCost, deleteRecipe, saveRecipe } from '@/lib/cost-api';
+import { Recipe, Material, RecipeCostBreakdown, PackageType, UniformPricingConfig } from '@/types/cost';
+import { getRecipes, getMaterials, calculateRecipeCost, deleteRecipe, saveRecipe, getUniformPricing, saveUniformPricing, DEFAULT_UNIFORM_PRICING } from '@/lib/cost-api';
 import TutorialModal from '@/components/cost/TutorialModal';
 
 export default function RecipesListPage() {
@@ -39,15 +39,16 @@ export default function RecipesListPage() {
   // Set of expanded recipe IDs for flexible accordion control
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-  // Active Packaging Mode: 'cup' (個食カップ 120ml) or 'bulk' (業務用 2Lバルク)
+  // Active Packaging Mode: 'cup' (個食カップ 100g) or 'bulk' (業務用 2Lバルク)
   const [activePackageType, setActivePackageType] = useState<PackageType>('cup');
 
   // Tutorial modal & quick guide visibility
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [showQuickGuide, setShowQuickGuide] = useState(true);
 
-  // Price Simulation Overrides for interactive sandbox
-  const [simulatedWholesale, setSimulatedWholesale] = useState<Record<string, number>>({});
+  // Uniform Selling Price State (全フレーバー一律設定)
+  const [uniformPricing, setUniformPricing] = useState<UniformPricingConfig>(DEFAULT_UNIFORM_PRICING);
+  const [priceSavedNotice, setPriceSavedNotice] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -55,12 +56,14 @@ export default function RecipesListPage() {
 
   const loadData = async () => {
     setLoading(true);
-    const [recData, matData] = await Promise.all([
+    const [recData, matData, pricingData] = await Promise.all([
       getRecipes(),
       getMaterials(),
+      getUniformPricing(),
     ]);
     setRecipes(recData);
     setMaterials(matData);
+    setUniformPricing(pricingData);
     
     // By default, keep first recipe expanded so beginners immediately see detail
     if (recData.length > 0 && expandedIds.size === 0) {
@@ -106,32 +109,38 @@ export default function RecipesListPage() {
     await loadData();
   };
 
-  // Calculate breakdowns for all recipes based on activePackageType
+  const isBulk = activePackageType === 'bulk';
+
+  const handlePriceChange = async (type: PackageType, newPrice: number) => {
+    const val = Number.isNaN(newPrice) ? 0 : Math.max(0, newPrice);
+    const updated = type === 'bulk'
+      ? { ...uniformPricing, bulk_wholesale_price: val }
+      : { ...uniformPricing, cup_wholesale_price: val };
+    setUniformPricing(updated);
+    await saveUniformPricing(updated);
+    setPriceSavedNotice(true);
+    setTimeout(() => setPriceSavedNotice(false), 2000);
+  };
+
+  const activeUniformPrice = isBulk
+    ? uniformPricing.bulk_wholesale_price
+    : uniformPricing.cup_wholesale_price;
+
+  // Calculate breakdowns for all recipes based on activePackageType & uniform pricing
   const recipeBreakdowns = useMemo(() => {
     const map = new Map<string, RecipeCostBreakdown>();
+    const currentWholesale = isBulk
+      ? uniformPricing.bulk_wholesale_price
+      : uniformPricing.cup_wholesale_price;
+    const currentRetail = isBulk
+      ? uniformPricing.bulk_retail_price
+      : uniformPricing.cup_retail_price;
+
     recipes.forEach(r => {
-      // Apply simulation wholesale if overridden
-      let effectiveRecipe = { ...r };
-      const simPrice = simulatedWholesale[`${r.id}-${activePackageType}`];
-
-      if (simPrice !== undefined) {
-        if (activePackageType === 'bulk') {
-          effectiveRecipe.bulk_config = {
-            ...effectiveRecipe.bulk_config,
-            target_wholesale_price: simPrice,
-          };
-        } else {
-          effectiveRecipe.cup_config = {
-            ...effectiveRecipe.cup_config,
-            target_wholesale_price: simPrice,
-          };
-        }
-      }
-
-      map.set(r.id, calculateRecipeCost(effectiveRecipe, materials, activePackageType));
+      map.set(r.id, calculateRecipeCost(r, materials, activePackageType, currentWholesale, currentRetail));
     });
     return map;
-  }, [recipes, materials, activePackageType, simulatedWholesale]);
+  }, [recipes, materials, activePackageType, uniformPricing, isBulk]);
 
   // Filter recipes
   const filteredRecipes = recipes.filter(r => {
@@ -139,8 +148,6 @@ export default function RecipesListPage() {
     const q = searchQuery.toLowerCase();
     return r.name.toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q) || (r.category || '').toLowerCase().includes(q);
   });
-
-  const isBulk = activePackageType === 'bulk';
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16 font-sans">
@@ -219,7 +226,7 @@ export default function RecipesListPage() {
               <div className="text-xs">
                 <div className="font-semibold text-slate-800">カップ ⇔ 2Lバルクを切替</div>
                 <div className="text-[11px] text-slate-500 mt-0.5">
-                  下のスイッチで、1個あたり（120ml）と2L角型容器1本あたりの原価を即座に再計算。
+                  下のスイッチで、1個あたり（100g）と2L角型容器1本あたりの原価を即座に再計算。
                 </div>
               </div>
             </div>
@@ -231,7 +238,7 @@ export default function RecipesListPage() {
               <div className="text-xs">
                 <div className="font-semibold text-slate-800">カードを開いて粗利試算</div>
                 <div className="text-[11px] text-slate-500 mt-0.5">
-                  各カードの「内訳・試算」を開くと、価格スライダーで卸先への提案価格と粗利率を検証可能。
+                  各カードの「内訳・試算」を開くと、直接入力した想定卸価格での粗利率や利益額を検証可能。
                 </div>
               </div>
             </div>
@@ -264,7 +271,7 @@ export default function RecipesListPage() {
                 : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            <span>🍨 個食カップ (120ml)</span>
+            <span>🍨 個食カップ (100g)</span>
             <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${!isBulk ? 'bg-amber-100 text-amber-900' : 'bg-slate-200 text-slate-600'}`}>
               65個 / 仕込み
             </span>
@@ -320,6 +327,153 @@ export default function RecipesListPage() {
           {/* Recipe Count Badge */}
           <div className="text-[11px] font-mono text-slate-500 px-2.5 py-1.5 rounded-lg bg-slate-100 shrink-0">
             {filteredRecipes.length} / {recipes.length}件
+          </div>
+        </div>
+      </div>
+
+      {/* Uniform Price Setting Card (全フレーバー一律 想定卸価格 設定パネル) */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-slate-900 text-white">
+              <Tag className="w-4 h-4" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm text-slate-900">販売価格の一律設定（想定卸価格）</span>
+                <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                  全10フレーバー共通連動
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                個食カップ・2Lバルクそれぞれの卸価格を一律で設定できます。直接金額を入力すると全レシピの粗利・原価率が即座に再計算されます。
+              </p>
+            </div>
+          </div>
+
+          {priceSavedNotice && (
+            <div className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200/70 shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>一律価格を更新しました（全レシピに反映）</span>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3.5">
+          {/* Cup Wholesale Input */}
+          <div className={`p-3.5 rounded-xl border transition-all ${
+            !isBulk ? 'bg-amber-50/40 border-amber-300 ring-2 ring-amber-400/20' : 'bg-slate-50/60 border-slate-200/80'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🍨</span>
+                <span className="text-xs font-bold text-slate-800">個食カップ (100g) 一律 想定卸価格</span>
+              </div>
+              {!isBulk && (
+                <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
+                  現在選択中
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono font-bold text-slate-400 text-sm">¥</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={10}
+                  value={uniformPricing.cup_wholesale_price || ''}
+                  onChange={(e) => handlePriceChange('cup', Number(e.target.value))}
+                  placeholder="340"
+                  className="w-full pl-8 pr-12 py-2 bg-white border border-slate-200 rounded-xl text-base font-bold font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/15 focus:border-slate-400 shadow-2xs"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">/ 個</span>
+              </div>
+              
+              {/* Quick Adjustment Buttons */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handlePriceChange('cup', Math.max(0, uniformPricing.cup_wholesale_price - 10))}
+                  className="px-2.5 py-2 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
+                  title="10円下げる"
+                >
+                  -10
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePriceChange('cup', uniformPricing.cup_wholesale_price + 10)}
+                  className="px-2.5 py-2 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
+                  title="10円上げる"
+                >
+                  +10
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2">
+              <span>参考店頭小売価格: ¥{uniformPricing.cup_retail_price.toLocaleString()}</span>
+              <span className="text-slate-400">（容量: 100g基準）</span>
+            </div>
+          </div>
+
+          {/* Bulk Wholesale Input */}
+          <div className={`p-3.5 rounded-xl border transition-all ${
+            isBulk ? 'bg-emerald-50/40 border-emerald-300 ring-2 ring-emerald-400/20' : 'bg-slate-50/60 border-slate-200/80'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-base">📦</span>
+                <span className="text-xs font-bold text-slate-800">業務用 2Lバルク 一律 想定卸価格</span>
+              </div>
+              {isBulk && (
+                <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
+                  現在選択中
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono font-bold text-slate-400 text-sm">¥</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={100}
+                  value={uniformPricing.bulk_wholesale_price || ''}
+                  onChange={(e) => handlePriceChange('bulk', Number(e.target.value))}
+                  placeholder="4320"
+                  className="w-full pl-8 pr-16 py-2 bg-white border border-slate-200 rounded-xl text-base font-bold font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/15 focus:border-slate-400 shadow-2xs"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">/ 本 (2L)</span>
+              </div>
+
+              {/* Quick Adjustment Buttons */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handlePriceChange('bulk', Math.max(0, uniformPricing.bulk_wholesale_price - 100))}
+                  className="px-2.5 py-2 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
+                  title="100円下げる"
+                >
+                  -100
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePriceChange('bulk', uniformPricing.bulk_wholesale_price + 100)}
+                  className="px-2.5 py-2 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
+                  title="100円上げる"
+                >
+                  +100
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2">
+              <span>参考メニュー想定価格: ¥{uniformPricing.bulk_retail_price.toLocaleString()}</span>
+              <span className="text-slate-400">（容量: 2L角型容器）</span>
+            </div>
           </div>
         </div>
       </div>
@@ -406,10 +560,6 @@ export default function RecipesListPage() {
             if (!breakdown) return null;
 
             const isExpanded = expandedIds.has(recipe.id);
-            const simKey = `${recipe.id}-${activePackageType}`;
-            const currentSimWholesale = simulatedWholesale[simKey] !== undefined
-              ? simulatedWholesale[simKey]
-              : (isBulk ? (recipe.bulk_config?.target_wholesale_price || 4320) : (recipe.cup_config?.target_wholesale_price || 340));
 
             return (
               <div
@@ -428,10 +578,10 @@ export default function RecipesListPage() {
                         <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
                           isBulk ? 'bg-emerald-50 text-emerald-800 border border-emerald-200/60' : 'bg-amber-50 text-amber-800 border border-amber-200/60'
                         }`}>
-                          {isBulk ? '📦 2L業務用バルク' : '🍨 個食カップ (120ml)'}
+                          {isBulk ? '📦 2L業務用バルク' : '🍨 個食カップ (100g)'}
                         </span>
                         <span className="text-xs text-slate-400 font-mono">
-                          仕上がり: <strong>{breakdown.target_quantity}{breakdown.unit_name}</strong> / 仕込み
+                          仕上がり: <strong>{breakdown.target_quantity}{breakdown.unit_name}</strong> {!isBulk ? '(100g/個)' : ''} / 仕込み
                         </span>
                       </div>
                       <h2 className="text-base font-bold text-slate-900 tracking-tight truncate">
@@ -589,7 +739,7 @@ export default function RecipesListPage() {
                       <div className="bg-white p-4 rounded-xl border border-slate-200/80">
                         <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
                           <span className="font-semibold text-slate-800 flex items-center gap-1.5">
-                            🥣 使用材料配合 ({breakdown.ingredient_items.length}品目・全形態共通)
+                            🥣 使用材料配合 ({breakdown.ingredient_items.length}品目・計{breakdown.total_ingredient_weight ? `${breakdown.total_ingredient_weight.toLocaleString()}g` : '全形態共通'})
                           </span>
                           <span className="font-mono text-slate-800 font-bold">
                             小計 ¥{Math.round(breakdown.total_ingredient_cost).toLocaleString()}
@@ -664,43 +814,47 @@ export default function RecipesListPage() {
 
                     </div>
 
-                    {/* Bottom Interactive Simulation Panel */}
-                    <div className="p-4 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
+                    {/* Bottom Simulation Panel (直接入力方式) */}
+                    <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/90 shadow-2xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                         <div className="flex items-center gap-2">
-                          <Sliders className="w-4 h-4 text-slate-600" />
-                          <span className="font-semibold text-slate-900 text-xs">
-                            {isBulk ? '業務用バルク卸価格 シミュレーター' : 'カップ卸価格 シミュレーター'}
+                          <Tag className="w-4 h-4 text-slate-700" />
+                          <span className="font-bold text-slate-900 text-xs">
+                            {isBulk ? '業務用2Lバルク 想定卸価格' : '個食カップ(100g) 想定卸価格'}（一律設定）
+                          </span>
+                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                            全フレーバー共通
                           </span>
                         </div>
-                        <span className="text-[11px] text-slate-400">
-                          スライダーを動かして卸価格変更時の粗利率をテストできます
+                        <span className="text-[11px] text-slate-500">
+                          金額を直接入力すると、全レシピの一律卸価格と粗利が連動して更新されます
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                         <div className="space-y-1">
                           <div className="flex justify-between text-xs font-medium text-slate-600">
-                            <span>卸価格テスト</span>
-                            <span className="font-mono text-slate-900 font-bold">
-                              ¥{currentSimWholesale.toLocaleString()} / {breakdown.unit_name}
+                            <span>想定卸価格 (直接入力)</span>
+                            <span className="text-[10px] text-slate-400">税込</span>
+                          </div>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">¥</span>
+                            <input
+                              type="number"
+                              min={0}
+                              step={isBulk ? 100 : 10}
+                              value={activeUniformPrice || ''}
+                              onChange={(e) => handlePriceChange(activePackageType, Number(e.target.value))}
+                              placeholder={isBulk ? '4320' : '340'}
+                              className="w-full pl-7 pr-12 py-2 bg-white border border-slate-300 rounded-lg text-sm font-bold font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 shadow-2xs"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                              / {breakdown.unit_name}
                             </span>
                           </div>
-                          <input
-                            type="range"
-                            min={Math.round(breakdown.unit_manufacturing_cost * 1.05)}
-                            max={isBulk ? 7000 : 700}
-                            step={isBulk ? 100 : 10}
-                            value={currentSimWholesale}
-                            onChange={(e) => setSimulatedWholesale(prev => ({
-                              ...prev,
-                              [simKey]: Number(e.target.value)
-                            }))}
-                            className="w-full accent-slate-900"
-                          />
                         </div>
 
-                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 flex items-center justify-between">
+                        <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 flex items-center justify-between shadow-2xs">
                           <div>
                             <span className="text-[10px] text-slate-400">卸 原価率</span>
                             <div className={`text-sm font-bold font-mono ${
@@ -720,9 +874,9 @@ export default function RecipesListPage() {
                         <div className="flex items-center justify-end gap-3">
                           <Link
                             href={`/cost/recipes/${recipe.id}`}
-                            className="flex items-center gap-1 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium transition-all shadow-xs"
+                            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition-all shadow-xs"
                           >
-                            <span>配合・設定を編集</span>
+                            <span>配合・資材を編集</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </Link>
                         </div>

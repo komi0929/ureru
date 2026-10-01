@@ -6,6 +6,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import CostSidebar from '@/components/cost/CostSidebar';
 import CostHeader from '@/components/cost/CostHeader';
+import StoreSidebar from '@/components/store/StoreSidebar';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -19,7 +20,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // 2. レシピ原価管理画面の場合
+  // 2. 店舗経営分析画面 (STORE LAB) の場合
+  if (pathname.startsWith('/store')) {
+    return (
+      <div className="min-h-screen flex bg-slate-50/60 text-slate-900">
+        <StoreSidebar />
+        <div className="flex-1 ml-64 flex flex-col min-h-screen">
+          <main className="flex-1">
+            {children}
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. レシピ原価管理画面の場合
   if (pathname.startsWith('/cost')) {
     return (
       <div className="min-h-screen flex bg-slate-50/60 text-slate-900">
