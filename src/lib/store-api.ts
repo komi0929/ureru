@@ -27,7 +27,7 @@ const STORAGE_KEY_IMPORT_HISTORY = 'soystories_store_import_history_v1';
 // 1. ファイル名から期間 (YYYY-MM) を自動読み取るロジック
 // -------------------------------------------------------------
 export function detectPeriodFromFileName(fileName: string, fileContent?: string): string {
-  // パターン1: YYYYMMDD_YYYYMMDD (例: 商品別売上_20260901_20260930.csv)
+  // パターン1: YYYYMMDD-YYYYMMDD または YYYYMMDD_YYYYMMDD (例: 商品別売上_20260801-20260831.csv)
   const rangeMatch = fileName.match(/(20\d{2})(\d{2})\d{2}[-_](20\d{2})(\d{2})\d{2}/);
   if (rangeMatch) {
     return `${rangeMatch[1]}-${rangeMatch[2]}`;
@@ -73,23 +73,59 @@ export function detectPeriodFromFileName(fileName: string, fileContent?: string)
 }
 
 // -------------------------------------------------------------
-// 2. CSVヘッダー行からCSV種別を自動判別するロジック
+// 2. CSVヘッダー行またはファイル名からCSV種別を自動判別するロジック
 // -------------------------------------------------------------
-export function detectCSVType(firstLine: string): StoreCSVType {
-  const line = firstLine.toLowerCase();
+export function detectCSVType(firstLine: string, fileName?: string): StoreCSVType {
+  // A. ファイル名による判定 (最も確実)
+  if (fileName) {
+    const fName = fileName.toLowerCase();
+    if (fName.includes('商品別売上') || fName.includes('商品別')) {
+      return 'product_sales';
+    }
+    if (fName.includes('売上集計') || fName.includes('日別売上') || fName.includes('日別')) {
+      return 'daily_sales';
+    }
+    if (fName.includes('会計明細') || fName.includes('取引明細') || fName.includes('レシート') || fName.includes('伝票')) {
+      return 'transactions';
+    }
+  }
+
+  // B. ヘッダー行テキストによる判定 (BOM除去後)
+  const line = firstLine.replace(/^\uFEFF/, '').toLowerCase();
 
   // 商品別売上CSV: 「商品名」「純売上金額」「構成比」「売上商品数」など
-  if (line.includes('商品名') || line.includes('純売上') || line.includes('カテゴリー') || line.includes('jes[') || line.includes('i,jes[')) {
+  if (
+    line.includes('商品名') || 
+    line.includes('純売上') || 
+    line.includes('カテゴリー') || 
+    line.includes('売上商品数') ||
+    line.includes('jes[') || 
+    line.includes('i,jes[')
+  ) {
     return 'product_sales';
   }
 
   // 日別売上集計CSV: 「集計対象日」「組数」「組単価」「客数」「客単価」「商品点数」
-  if (line.includes('集計対象日') || line.includes('組単価') || line.includes('客単価') || line.includes('wv') || line.includes('qv')) {
+  if (
+    line.includes('集計対象日') || 
+    line.includes('組単価') || 
+    line.includes('客単価') || 
+    line.includes('組数') ||
+    line.includes('wv') || 
+    line.includes('qv')
+  ) {
     return 'daily_sales';
   }
 
   // 会計明細CSV: 「伝票no」「会計日時」「airペイ」「paypay」「まとめ販売値引き」
-  if (line.includes('伝票no') || line.includes('会計日時') || line.includes('airペイ') || line.includes('paypay') || line.includes('no,v')) {
+  if (
+    line.includes('伝票no') || 
+    line.includes('会計日時') || 
+    line.includes('airペイ') || 
+    line.includes('paypay') || 
+    line.includes('まとめ販売値引き') ||
+    line.includes('no,v')
+  ) {
     return 'transactions';
   }
 

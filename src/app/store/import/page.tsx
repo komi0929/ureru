@@ -73,22 +73,37 @@ export default function StoreImportPage() {
       }
 
       try {
-        // Shift_JIS もしくは UTF-8 で読み込み
         const arrayBuffer = await file.arrayBuffer();
         
-        // まずShift_JIS（CP932）でデコードを試みる（Airレジのデフォルト）
+        // Airレジは原則Shift_JIS（CP932）で出力される。
+        // まずUTF-8 (fatal: true)でデコードを試し、Shift_JIS等の不正バイトがあればcatchしてShift_JISでデコードする。
         let text = '';
         try {
-          const decoder = new TextDecoder('shift-jis');
-          text = decoder.decode(arrayBuffer);
-          // 文字化けチェック: もし '' が多すぎる場合はUTF-8で再デコード
-          if (text.split('').length > 5) {
-            const utf8Decoder = new TextDecoder('utf-8');
-            text = utf8Decoder.decode(arrayBuffer);
-          }
-        } catch {
-          const utf8Decoder = new TextDecoder('utf-8');
+          const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
           text = utf8Decoder.decode(arrayBuffer);
+        } catch {
+          try {
+            const sjisDecoder = new TextDecoder('shift-jis');
+            text = sjisDecoder.decode(arrayBuffer);
+          } catch {
+            const fallbackDecoder = new TextDecoder('utf-8');
+            text = fallbackDecoder.decode(arrayBuffer);
+          }
+        }
+
+        // 置換文字 \uFFFD が多く含まれる場合の二重安全チェック
+        if (text.includes('\uFFFD')) {
+          try {
+            const sjisDecoder = new TextDecoder('shift-jis');
+            const sjisText = sjisDecoder.decode(arrayBuffer);
+            const countCurrent = (text.match(/\uFFFD/g) || []).length;
+            const countSjis = (sjisText.match(/\uFFFD/g) || []).length;
+            if (countSjis < countCurrent) {
+              text = sjisText;
+            }
+          } catch {
+            // ignore
+          }
         }
 
         const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
@@ -109,8 +124,8 @@ export default function StoreImportPage() {
         // 1. ファイル名から期間（YYYY-MM）を自動判定
         const period = detectPeriodFromFileName(file.name, text);
 
-        // 2. ヘッダー行からCSV種別を自動判定
-        const detectedType = detectCSVType(lines[0]);
+        // 2. ファイル名＋ヘッダー行からCSV種別を自動判定（ファイル名最優先）
+        const detectedType = detectCSVType(lines[0], file.name);
         const recordCount = lines.length - 1;
 
         newPreviews.push({
@@ -121,7 +136,7 @@ export default function StoreImportPage() {
           recordCount,
           status: detectedType !== 'unknown' ? 'ready' : 'error',
           rawText: text,
-          errorMessage: detectedType === 'unknown' ? 'Airレジの対応CSVヘッダーと一致しませんでした' : undefined,
+          errorMessage: detectedType === 'unknown' ? 'Airレジの対応CSV種別を選択してください' : undefined,
         });
       } catch (err) {
         console.error(err);
@@ -165,6 +180,18 @@ export default function StoreImportPage() {
     setPreviews(prev => {
       const next = [...prev];
       next[index].detectedPeriod = newPeriod;
+      return next;
+    });
+  };
+
+  // 個別のCSV種別手動変更（万が一の救済）
+  const updateType = (index: number, newType: StoreCSVType) => {
+    setPreviews(prev => {
+      const next = [...prev];
+      next[index].detectedType = newType;
+      next[index].typeLabel = getTypeLabel(newType);
+      next[index].status = newType !== 'unknown' ? 'ready' : 'error';
+      next[index].errorMessage = newType === 'unknown' ? 'Airレジの対応CSV種別を選択してください' : undefined;
       return next;
     });
   };
@@ -406,15 +433,22 @@ export default function StoreImportPage() {
                       <div className="font-bold text-xs text-slate-900 break-all">
                         {item.fileName}
                       </div>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className="text-[10px] font-semibold bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-700">
-                          {item.typeLabel}
-                        </span>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <select
+                          value={item.detectedType}
+                          onChange={(e) => updateType(idx, e.target.value as StoreCSVType)}
+                          className="text-[11px] font-semibold bg-white border border-slate-300 rounded px-2 py-0.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-2xs"
+                        >
+                          <option value="product_sales">🍨 商品別売上CSV</option>
+                          <option value="daily_sales">📅 日別売上集計CSV</option>
+                          <option value="transactions">🧾 会計明細CSV</option>
+                          <option value="unknown">❓ 不明なCSV（選択してください）</option>
+                        </select>
                         <span className="text-[10px] text-slate-500 font-mono">
                           {item.recordCount}行
                         </span>
-                        {item.errorMessage && (
-                          <span className="text-[10px] text-rose-600 font-medium">
+                        {item.errorMessage && item.status === 'error' && (
+                          <span className="text-[10px] text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
                             {item.errorMessage}
                           </span>
                         )}
