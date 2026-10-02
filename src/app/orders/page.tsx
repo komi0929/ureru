@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { 
   ShoppingBag, 
   Plus, 
@@ -11,179 +12,655 @@ import {
   FileText, 
   RotateCcw,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Truck,
+  ExternalLink,
+  Copy,
+  Check,
+  Share2,
+  Calendar,
+  Clock,
+  Boxes,
+  Building2,
+  CheckCircle2,
+  X,
+  Package,
+  Eye,
+  Edit2
 } from 'lucide-react';
-import { mockOrders } from '@/lib/mock-data';
+import { B2BOrder, OrderStatus, ShippingBoxSize } from '@/types/order';
+import { getB2BOrders, updateB2BOrderStatus } from '@/lib/order-api';
 
 export default function OrdersPage() {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ja-JP', {
-      style: 'currency',
-      currency: 'JPY'
-    }).format(amount);
+  const [orders, setOrders] = useState<B2BOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // URL共有モーダル
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [customStoreName, setCustomStoreName] = useState('');
+  const [copiedType, setCopiedType] = useState<string | null>(null);
+
+  // 注文詳細モーダル
+  const [selectedOrder, setSelectedOrder] = useState<B2BOrder | null>(null);
+  const [trackingNumberInput, setTrackingNumberInput] = useState('');
+
+  // トースト
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
   };
 
-  const getStatusColor = (status: string) => {
-    switch(status) {
-      case 'completed': return 'bg-emerald-100 text-emerald-700';
-      case 'pending': return 'bg-amber-100 text-amber-700';
-      case 'processing': return 'bg-blue-100 text-blue-700';
-      case 'cancelled': return 'bg-rose-100 text-rose-700';
-      default: return 'bg-gray-100 text-gray-700';
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const loadOrders = async () => {
+    setLoading(true);
+    const data = await getB2BOrders();
+    setOrders(data);
+    setLoading(false);
+  };
+
+  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    await updateB2BOrderStatus(orderId, newStatus);
+    await loadOrders();
+    showToast('ステータスを更新しました');
+    if (selectedOrder && selectedOrder.id === orderId) {
+      setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch(status) {
-      case 'completed': return '完了';
-      case 'pending': return '保留中';
-      case 'processing': return '処理中';
-      case 'cancelled': return 'キャンセル';
-      default: return status;
-    }
+  const handleSaveTrackingNumber = async (orderId: string) => {
+    await updateB2BOrderStatus(orderId, 'shipped', trackingNumberInput.trim());
+    await loadOrders();
+    showToast('ヤマトお問い合わせ伝票番号を登録し、発送済みに更新しました！');
+    setSelectedOrder(null);
   };
+
+  // 統計集計
+  const stats = useMemo(() => {
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.status !== 'cancelled' ? o.grand_total : 0), 0);
+    const totalVolume = orders.reduce((sum, o) => sum + (o.status !== 'cancelled' ? o.total_volume_liters : 0), 0);
+    const pendingCount = orders.filter(o => o.status === 'pending' || o.status === 'processing').length;
+    return {
+      orderCount: orders.length,
+      totalRevenue,
+      totalVolume,
+      pendingCount,
+    };
+  }, [orders]);
+
+  // フィルタリング
+  const filteredOrders = useMemo(() => {
+    return orders.filter(o => {
+      if (statusFilter !== 'all' && o.status !== statusFilter) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchNum = o.order_number.toLowerCase().includes(q);
+        const matchStore = o.customer.store_name.toLowerCase().includes(q);
+        const matchName = o.customer.contact_name.toLowerCase().includes(q);
+        const matchItem = o.items.some(i => i.recipe_name.toLowerCase().includes(q));
+        return matchNum || matchStore || matchName || matchItem;
+      }
+      return true;
+    });
+  }, [orders, statusFilter, searchQuery]);
+
+  // 発注URL
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.soystories.cafe';
+  const generalOrderUrl = `${baseUrl}/order`;
+  const customOrderUrl = customStoreName.trim() 
+    ? `${baseUrl}/order?store=${encodeURIComponent(customStoreName.trim())}` 
+    : generalOrderUrl;
+
+  const handleCopyText = (text: string, type: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedType(type);
+    showToast('クリップボードにコピーしました！');
+    setTimeout(() => setCopiedType(null), 2500);
+  };
+
+  const lineTemplate = `【SoyStories】業務用クラフトアイス オンライン発注のご案内
+
+いつもお世話になっております。SoyStoriesです。
+当店の業務用大豆クラフトアイス（1L / 2L バルク）のオンライン発注ポータルを開設いたしました。
+
+以下のURLより、24時間いつでも簡単に発注いただけます。
+👉 ${customOrderUrl}
+
+・ヤマト運輸 冷凍クール便にて最短3営業日でお店へ直送
+・月末締めの一括請求書払い（銀行振込）
+
+ご不明な点はお気軽にご連絡ください！`;
+
+  const emailTemplate = `件名: 【SoyStories】業務用クラフトアイス オンライン発注システムのご案内
+
+${customStoreName || 'お取引先様'}
+ご担当者様
+
+いつも大変お世話になっております。
+SoyStories（ソイストーリーズ）でございます。
+
+この度、お取引先様専用のオンライン発注ポータルを開設いたしました。
+以下のURLより、24時間いつでもご希望のフレーバー・容量（1L / 2L）をご発注いただけます。
+
+■ オンライン発注ポータルURL
+${customOrderUrl}
+
+■ 配送・決済条件
+・配送方法: ヤマト運輸 クール宅急便（冷凍）
+・発送目安: ご発注より最短3営業日以降に福岡より発送（配送日時・時間帯指定可能）
+・お支払い: 月末締め・翌月末払いの請求書払い（銀行振込）
+
+店舗様での食後デザートやメニュー展開に、ぜひご活用いただけますと幸いです。
+今後とも何卒よろしくお願い申し上げます。`;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-8 font-sans pb-24">
+      
+      {/* ── Page Header ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">受発注管理</h1>
-          <p className="text-gray-500 mt-1">注文と請求書の管理を行います</p>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              受発注・出荷オペレーション
+            </span>
+            <span className="text-xs text-slate-400">オンラインポータル連動</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            B2B 受注・発注管理
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            お客様からのWEB発注をリアルタイムに集約。ヤマト冷凍クール便のサイズ・伝票番号管理と請求書発行をワンストップで実行します。
+          </p>
         </div>
-        <div className="flex gap-3">
-          <button className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 flex items-center gap-2 transition-colors shadow-sm">
-            <Download className="w-4 h-4" />
-            <span>エクスポート</span>
+
+        <div className="flex items-center gap-3">
+          {/* お客様用発注URL発行ボタン */}
+          <button
+            onClick={() => setIsShareModalOpen(true)}
+            className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer"
+          >
+            <Share2 className="w-4 h-4 text-emerald-100" />
+            <span>お客様へ発注URLを発行・共有</span>
           </button>
-          <button className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 flex items-center gap-2 transition-colors shadow-sm">
-            <Plus className="w-4 h-4" />
-            <span>新規発注</span>
-          </button>
+
+          <Link
+            href="/order"
+            target="_blank"
+            className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-semibold text-xs flex items-center gap-1.5 transition-colors border border-slate-200"
+            title="お客様向け発注ポータルを別タブで開く"
+          >
+            <ExternalLink className="w-4 h-4 text-slate-500" />
+            <span>発注画面を確認</span>
+          </Link>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">今月の受注数</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">45件</h3>
-            </div>
-            <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
-              <ShoppingBag className="w-6 h-6" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            <TrendingUp className="w-4 h-4 text-emerald-500 mr-1" />
-            <span className="text-emerald-500 font-medium">12%</span>
-            <span className="text-gray-500 ml-2">前月比</span>
-          </div>
+      {/* ── Stats Overview ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs">
+          <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">受注総件数</div>
+          <div className="text-2xl font-bold font-mono text-slate-900 mt-1">{stats.orderCount} 件</div>
+          <div className="text-[11px] text-slate-500 mt-1">オンラインWEB発注累計</div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">今月の売上</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(1250000)}</h3>
-            </div>
-            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
-              <TrendingUp className="w-6 h-6" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            <TrendingUp className="w-4 h-4 text-emerald-500 mr-1" />
-            <span className="text-emerald-500 font-medium">8%</span>
-            <span className="text-gray-500 ml-2">前月比</span>
-          </div>
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs">
+          <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">受注金額合計 (税込)</div>
+          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">¥{stats.totalRevenue.toLocaleString()}</div>
+          <div className="text-[11px] text-emerald-600 font-medium mt-1">月末締め請求書発行対象</div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">未入金請求書</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">3件</h3>
-            </div>
-            <div className="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center text-rose-600">
-              <AlertCircle className="w-6 h-6" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm text-rose-600">
-            <span>{formatCurrency(340000)}の未回収</span>
-          </div>
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs">
+          <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">総出荷容量 (バルク)</div>
+          <div className="text-2xl font-bold font-mono text-slate-900 mt-1">{stats.totalVolume} ℓ</div>
+          <div className="text-[11px] text-slate-500 mt-1">1Lおよび2Lバルクの合算</div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs">
+          <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">製造・出荷手配中</div>
+          <div className="text-2xl font-bold font-mono text-amber-700 mt-1">{stats.pendingCount} 件</div>
+          <div className="text-[11px] text-amber-600 font-medium mt-1">ヤマト集荷待ち・準備中</div>
         </div>
       </div>
 
-      {/* Orders Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white">
-          <h2 className="text-lg font-bold text-gray-900">最近の注文</h2>
-          <div className="flex gap-3">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="注文を検索..." 
-                className="pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 w-64"
-              />
-            </div>
-            <button className="px-3 py-2 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              <span className="text-sm">絞り込み</span>
-            </button>
-          </div>
-        </div>
+      {/* ── Orders Table Container ── */}
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden space-y-4">
         
+        {/* Table Controls (Search & Filter) */}
+        <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+            {['all', 'pending', 'processing', 'ready', 'shipped'].map(st => (
+              <button
+                key={st}
+                onClick={() => setStatusFilter(st)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                  statusFilter === st
+                    ? 'bg-slate-900 text-white shadow-2xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {st === 'all' ? 'すべて' :
+                 st === 'pending' ? '新規受付' :
+                 st === 'processing' ? '製造中' :
+                 st === 'ready' ? '発送準備完了' : '発送済み'}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input 
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="注文番号、店舗名、品名で検索..."
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            />
+          </div>
+        </div>
+
+        {/* Table Content */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50">
-                <th className="py-4 px-6 text-sm font-medium text-gray-500">注文番号</th>
-                <th className="py-4 px-6 text-sm font-medium text-gray-500">顧客名</th>
-                <th className="py-4 px-6 text-sm font-medium text-gray-500">ステータス</th>
-                <th className="py-4 px-6 text-sm font-medium text-gray-500">合計金額</th>
-                <th className="py-4 px-6 text-sm font-medium text-gray-500">注文日</th>
-                <th className="py-4 px-6 text-sm font-medium text-gray-500">アクション</th>
+              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-medium">
+                <th className="py-3 px-4">注文番号 / 日時</th>
+                <th className="py-3 px-4">発注店舗 / 担当者様</th>
+                <th className="py-3 px-4">発注商品内訳 (容量)</th>
+                <th className="py-3 px-4">ヤマト配送設定 / 伝票番号</th>
+                <th className="py-3 px-4 text-right">請求金額 (税込)</th>
+                <th className="py-3 px-4 text-center">ステータス</th>
+                <th className="py-3 px-4 text-center">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {mockOrders && mockOrders.length > 0 ? (
-                mockOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-4 px-6 text-sm font-medium text-gray-900">{order.id}</td>
-                    <td className="py-4 px-6 text-sm text-gray-700">{order.lead_id}</td>
-                    <td className="py-4 px-6">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                        {getStatusLabel(order.status)}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-sm font-medium text-gray-900">{formatCurrency(order.total_amount)}</td>
-                    <td className="py-4 px-6 text-sm text-gray-500">{new Date(order.created_at).toLocaleDateString('ja-JP')}</td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <button className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="詳細">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                        <button className="p-1.5 text-blue-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors" title="請求書生成">
-                          <FileText className="w-4 h-4" />
-                        </button>
-                        <button className="p-1.5 text-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors" title="リピート発注">
-                          <RotateCcw className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-gray-500">注文データがありません</td>
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                    受注データを読み込み中...
+                  </td>
                 </tr>
+              ) : filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400 space-y-2">
+                    <ShoppingBag className="w-8 h-8 mx-auto opacity-30" />
+                    <p>該当する受注データがありません</p>
+                  </td>
+                </tr>
+              ) : (
+                filteredOrders.map(order => {
+                  return (
+                    <tr key={order.id} className="hover:bg-slate-50/80 transition-colors">
+                      {/* 注文番号 */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="font-mono font-bold text-slate-900">
+                          {order.order_number}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          {new Date(order.created_at).toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </td>
+
+                      {/* 店舗情報 */}
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-slate-900">
+                          {order.customer.store_name}
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          {order.customer.contact_name} 様 ({order.customer.phone})
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate max-w-xs">
+                          {order.customer.prefecture}{order.customer.city}
+                        </div>
+                      </td>
+
+                      {/* 商品内訳 */}
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-1">
+                          {order.items.map(item => (
+                            <div key={item.id} className="text-slate-800">
+                              <span className="font-medium">{item.recipe_name}</span>
+                              <span className="font-mono text-[11px] text-emerald-700 ml-1.5">
+                                [{item.size} × {item.quantity}本]
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-1 font-semibold">
+                          総容量: {order.total_volume_liters}ℓ
+                        </div>
+                      </td>
+
+                      {/* ヤマト配送 */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-1.5 text-slate-800 font-medium">
+                          <Truck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <span>{order.shipping.box_size}サイズ (クール冷凍)</span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          発送予定: {order.shipping.estimated_shipping_date}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          時間指定: {order.shipping.delivery_time_slot}
+                        </div>
+                        {order.shipping.tracking_number ? (
+                          <div className="text-[11px] font-mono text-emerald-700 font-bold mt-1">
+                            伝票: {order.shipping.tracking_number}
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-amber-700 font-semibold mt-1">
+                            ※伝票番号 未登録
+                          </div>
+                        )}
+                      </td>
+
+                      {/* 請求金額 */}
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono">
+                        <div className="font-bold text-sm text-slate-900">
+                          ¥{order.grand_total.toLocaleString()}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          (送料 ¥{order.shipping.shipping_fee.toLocaleString()}込)
+                        </div>
+                      </td>
+
+                      {/* ステータス */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <select
+                          value={order.status}
+                          onChange={(e) => handleStatusChange(order.id, e.target.value as OrderStatus)}
+                          className={`text-[11px] font-bold px-2.5 py-1 rounded-full border cursor-pointer ${
+                            order.status === 'pending' ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                            order.status === 'processing' ? 'bg-blue-50 text-blue-800 border-blue-200' :
+                            order.status === 'ready' ? 'bg-purple-50 text-purple-800 border-purple-200' :
+                            order.status === 'shipped' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
+                            'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          <option value="pending">新規受付</option>
+                          <option value="processing">製造中</option>
+                          <option value="ready">発送準備完了</option>
+                          <option value="shipped">発送済み</option>
+                          <option value="cancelled">キャンセル</option>
+                        </select>
+                      </td>
+
+                      {/* アクション */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setTrackingNumberInput(order.shipping.tracking_number || '');
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px] transition-colors cursor-pointer flex items-center gap-1"
+                            title="詳細確認・伝票番号入力"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-slate-500" />
+                            詳細
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* ── お客様向け発注URL発行・共有モーダル ── */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <Share2 className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-slate-900 text-sm">
+                  お客様用オンライン発注URLの発行・共有
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsShareModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 text-xs overflow-y-auto flex-1">
+              {/* URL発行ブロック */}
+              <div className="space-y-2">
+                <label className="font-bold text-slate-700 block">
+                  発注ポータルURL
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={customOrderUrl}
+                    className="flex-1 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs text-slate-800"
+                  />
+                  <button
+                    onClick={() => handleCopyText(customOrderUrl, 'url')}
+                    className="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer active:scale-95"
+                  >
+                    {copiedType === 'url' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    <span>URLコピー</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 店舗名プリセット入力 */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                <label className="font-semibold text-slate-700 text-[11px] block">
+                  💡 特定の取引先様専用URLにする場合（店舗名を自動セット）
+                </label>
+                <input
+                  type="text"
+                  placeholder="例: Rota Cafe 福岡店"
+                  value={customStoreName}
+                  onChange={(e) => setCustomStoreName(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
+                />
+              </div>
+
+              {/* テンプレート 1: LINE / DM 用 */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700">📱 LINE・Instagram DM用ご案内文</span>
+                  <button
+                    onClick={() => handleCopyText(lineTemplate, 'line')}
+                    className="text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedType === 'line' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    文面をコピー
+                  </button>
+                </div>
+                <textarea
+                  readOnly
+                  rows={6}
+                  value={lineTemplate}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 leading-relaxed font-sans resize-none"
+                />
+              </div>
+
+              {/* テンプレート 2: メール送信用 */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700">✉️ メール送信用ご案内文</span>
+                  <button
+                    onClick={() => handleCopyText(emailTemplate, 'email')}
+                    className="text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedType === 'email' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    文面をコピー
+                  </button>
+                </div>
+                <textarea
+                  readOnly
+                  rows={6}
+                  value={emailTemplate}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 leading-relaxed font-sans resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+              <button
+                onClick={() => setIsShareModalOpen(false)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold text-xs transition-colors"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 注文詳細 ＆ ヤマト伝票番号登録モーダル ── */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">
+                  受注詳細: {selectedOrder.order_number}
+                </h3>
+                <span className="text-[11px] text-slate-400 font-mono">
+                  {new Date(selectedOrder.created_at).toLocaleString('ja-JP')}
+                </span>
+              </div>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 text-xs overflow-y-auto flex-1">
+              
+              {/* 顧客・お届け先 */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
+                <span className="font-bold text-slate-800 block text-xs">お届け先情報</span>
+                <div className="grid grid-cols-2 gap-2 text-slate-600">
+                  <div>店舗名: <strong className="text-slate-900">{selectedOrder.customer.store_name}</strong></div>
+                  <div>担当者: <strong className="text-slate-900">{selectedOrder.customer.contact_name} 様</strong></div>
+                  <div>TEL: <span className="font-mono text-slate-900">{selectedOrder.customer.phone}</span></div>
+                  <div>Email: <span className="font-mono text-slate-900">{selectedOrder.customer.email}</span></div>
+                  <div className="col-span-2">
+                    ご住所: 〒{selectedOrder.customer.postal_code} {selectedOrder.customer.prefecture}{selectedOrder.customer.city}{selectedOrder.customer.address_line}
+                  </div>
+                  {selectedOrder.customer.notes && (
+                    <div className="col-span-2 text-amber-900 bg-amber-50 p-2 rounded-lg border border-amber-200/60">
+                      備考: {selectedOrder.customer.notes}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 明細 */}
+              <div className="space-y-2">
+                <span className="font-bold text-slate-800 block text-xs">発注明細一覧</span>
+                <div className="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100">
+                  {selectedOrder.items.map(item => (
+                    <div key={item.id} className="p-3 flex justify-between items-center bg-white">
+                      <div>
+                        <div className="font-bold text-slate-900">{item.recipe_name}</div>
+                        <div className="text-[11px] text-slate-500 font-mono">
+                          {item.size} × {item.quantity}本 ({item.total_volume_liters}ℓ)
+                        </div>
+                      </div>
+                      <div className="font-mono font-bold text-slate-900">
+                        ¥{item.subtotal.toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="p-3 bg-slate-50 flex justify-between items-center font-bold text-slate-900">
+                    <span>商品合計 (税込)</span>
+                    <span className="font-mono">¥{selectedOrder.subtotal.toLocaleString()}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 flex justify-between items-center text-slate-600">
+                    <span>送料 (ヤマト冷凍 {selectedOrder.shipping.box_size}サイズ × {selectedOrder.shipping.box_count}箱)</span>
+                    <span className="font-mono font-bold">¥{selectedOrder.shipping.shipping_fee.toLocaleString()}</span>
+                  </div>
+                  <div className="p-3 bg-emerald-50 flex justify-between items-center font-extrabold text-sm text-emerald-950">
+                    <span>ご請求総額 (税込)</span>
+                    <span className="font-mono text-base text-emerald-800">¥{selectedOrder.grand_total.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ヤマト配送情報 ＆ 伝票番号入力 */}
+              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-3">
+                <span className="font-bold text-blue-950 block text-xs flex items-center gap-1.5">
+                  <Truck className="w-4 h-4 text-blue-600" />
+                  ヤマト運輸 出荷手配 ＆ 伝票番号登録
+                </span>
+                
+                <div className="grid grid-cols-2 gap-2 text-slate-700">
+                  <div>発送予定日: <strong className="font-mono">{selectedOrder.shipping.estimated_shipping_date}</strong></div>
+                  <div>時間指定: <strong>{selectedOrder.shipping.delivery_time_slot}</strong></div>
+                </div>
+
+                <div className="pt-2 border-t border-blue-200/80 space-y-1.5">
+                  <label className="font-bold text-blue-950 text-[11px] block">
+                    ヤマトお問い合わせ送り状番号
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="例: 1234-5678-9012"
+                      value={trackingNumberInput}
+                      onChange={(e) => setTrackingNumberInput(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-white border border-blue-300 rounded-xl font-mono text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSaveTrackingNumber(selectedOrder.id)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition-colors shrink-0 cursor-pointer shadow-sm"
+                    >
+                      伝票番号を登録して発送済みにする
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-blue-800/80">
+                    ※登録するとステータスが「発送済み」に更新され、お客様の履歴画面にも反映されます。
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <span className="text-[11px] text-slate-500">
+                決済方法: 月末締め請求書払い
+              </span>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold text-xs transition-colors"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-8 right-8 px-6 py-3.5 rounded-2xl bg-slate-900/95 backdrop-blur text-white text-xs font-bold shadow-2xl flex items-center gap-2.5 z-50 animate-fade-in border border-slate-700">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toast}</span>
+        </div>
+      )}
+
     </div>
   );
 }

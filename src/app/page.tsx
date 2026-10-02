@@ -145,11 +145,11 @@ export default function PortalHomePage() {
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </Link>
               <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
-                <Link href="/sales" className="hover:text-slate-800 transition-colors">営業モード</Link>
+                <Link href="/orders" className="hover:text-slate-800 font-bold text-emerald-700 transition-colors">受発注管理</Link>
+                <span>·</span>
+                <Link href="/order" target="_blank" className="hover:text-slate-800 transition-colors">発注ポータル ↗</Link>
                 <span>·</span>
                 <Link href="/discover" className="hover:text-slate-800 transition-colors">店舗収集</Link>
-                <span>·</span>
-                <Link href="/leads" className="hover:text-slate-800 transition-colors">リード管理</Link>
               </div>
             </div>
           </div>
