@@ -15,7 +15,11 @@ import {
   Package,
   Layers,
   Info,
-  Store
+  Store,
+  Truck,
+  ShoppingBag,
+  ExternalLink,
+  Share2
 } from 'lucide-react';
 import TutorialModal from '@/components/cost/TutorialModal';
 
@@ -52,85 +56,163 @@ export default function PortalHomePage() {
 
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>Production v2.1</span>
+            <span>Production v2.2</span>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-12 max-w-6xl mx-auto w-full">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-12 max-w-7xl mx-auto w-full">
         
         {/* Title & Introduction */}
-        <div className="text-center max-w-2xl mb-8 space-y-3">
+        <div className="text-center max-w-3xl mb-8 space-y-3">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-800 text-xs font-medium">
             <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            <span>SoyStories クラフトアイス統合オペレーション</span>
+            <span>SoyStories クラフトアイス統合オペレーション基盤</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
             利用するアプリケーションを選択
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-lg mx-auto">
-            B2B店舗開拓を自動化する営業支援システムと、カップ・2Lバルクの製造原価と粗利を管理するレシピ原価管理システムを目的別にご利用いただけます。
+          <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xl mx-auto">
+            オンライン発注ポータル・受注管理、B2B新規営業促進、レシピ原価粗利管理、直営店舗経営分析の4大基幹システムをご利用いただけます。
           </p>
         </div>
 
-        {/* First-time Guidance Notice */}
-        <div className="w-full max-w-4xl mb-6 p-4 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between gap-4">
+        {/* New Feature Notice Banner */}
+        <div className="w-full max-w-5xl mb-8 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200/80 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <Info className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <ShoppingBag className="w-5 h-5" />
             </div>
-            <div className="text-xs text-slate-600">
-              <strong className="text-slate-900">はじめてご利用の方へ：</strong>
-              原価計算・レシピ確認を行う場合は右側の「COST LAB」を、新規カフェ開拓やDM営業を行う場合は左側の「URERU」をお選びください。
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.2 rounded-md">NEW</span>
+                <strong className="text-xs font-bold text-slate-900">B2B受発注管理 ＆ オンライン発注ポータルを開設しました</strong>
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5">
+                取引先様へご案内可能な発注URL発行、1L/2Lバルク選択、ヤマト冷凍便送料自動計算、月末締め請求書連動に対応しています。
+              </p>
             </div>
           </div>
-          <button
-            onClick={() => setIsTutorialOpen(true)}
-            className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2 shrink-0 cursor-pointer"
-          >
-            チュートリアルを見る →
-          </button>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            <Link
+              href="/orders"
+              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+            >
+              受注管理画面へ →
+            </Link>
+            <Link
+              href="/order"
+              target="_blank"
+              className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-50 transition-colors flex items-center gap-1"
+            >
+              発注画面を開く ↗
+            </Link>
+          </div>
         </div>
 
-        {/* 3 Main Cards (Google Workspace / Stripe style) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl">
+        {/* 4 Main Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-7xl">
           
-          {/* Card 1: 営業促進 (URERU) */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
+          {/* Card 1: B2B受発注・オンライン発注 (ORDER HUB) - 新設！ */}
+          <div className="bg-white rounded-2xl border-2 border-emerald-500/80 p-6 shadow-sm hover:shadow-lg hover:border-emerald-600 transition-all duration-200 flex flex-col justify-between group relative overflow-hidden ring-2 ring-emerald-500/10">
+            <div className="absolute top-0 right-0 bg-gradient-to-l from-emerald-600 to-teal-600 text-white font-bold text-[9px] px-3 py-0.5 rounded-bl-lg tracking-wider">
+              NEW MODE
+            </div>
+
             <div>
               {/* Card Header Icon & Badge */}
               <div className="flex items-center justify-between mb-4">
-                <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-                  <Rocket className="w-5 h-5" />
+                <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
+                  <ShoppingBag className="w-5 h-5" />
                 </div>
-                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50/80 px-2 py-0.5 rounded-md border border-emerald-200/50">
-                  B2B営業促進
+                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300">
+                  B2B発注・受注管理
                 </span>
               </div>
 
               {/* Title & Description */}
               <h2 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-emerald-700 transition-colors">
-                営業促進 <span className="text-xs font-semibold text-slate-400 font-mono ml-1">URERU</span>
+                受発注管理 <span className="text-xs font-semibold text-slate-400 font-mono ml-1">ORDER HUB</span>
               </h2>
               <p className="text-xs text-slate-500 leading-relaxed mb-5">
-                見込みカフェ抽出からAIパーソナライズDM送信、無料サンプルのカンバン管理、受発注・請求書発行を自動化。
+                取引先様向けオンライン発注URL発行、リアルタイム受注集約、ヤマト冷凍便送料自動計算、月末締め請求書を自動化。
               </p>
 
               {/* Feature List */}
               <div className="space-y-2 mb-6 border-t border-slate-100 pt-4 text-[11px] text-slate-600">
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                  <span>1L / 2L バルク（1mℓ=2円税抜）</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                  <span>ヤマト冷凍便 送料自動計算（福岡発）</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                  <span>取引先専用 発注URL発行 & 共有</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-2">
+              <Link
+                href="/orders"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer"
+              >
+                <span>社内受注管理を開く</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                <Link 
+                  href="/order" 
+                  target="_blank" 
+                  className="w-full text-center py-1.5 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold border border-slate-200 flex items-center justify-center gap-1 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                  <span>お客様用 発注画面 ↗</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: 営業促進 (URERU) */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
+            <div>
+              {/* Card Header Icon & Badge */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                  <Rocket className="w-5 h-5" />
+                </div>
+                <span className="text-[11px] font-semibold text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-200/50">
+                  B2B営業促進
+                </span>
+              </div>
+
+              {/* Title & Description */}
+              <h2 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-blue-700 transition-colors">
+                営業促進 <span className="text-xs font-semibold text-slate-400 font-mono ml-1">URERU</span>
+              </h2>
+              <p className="text-xs text-slate-500 leading-relaxed mb-5">
+                見込みカフェ抽出からAIパーソナライズDM送信、無料サンプルのカンバン管理、店舗アプローチを自動化。
+              </p>
+
+              {/* Feature List */}
+              <div className="space-y-2 mb-6 border-t border-slate-100 pt-4 text-[11px] text-slate-600">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
                   <span>店舗自動収集 & AI-DM生成</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
                   <span>サンプル送付 5段階カンバン</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                  <span>受発注 ＆ 請求書PDF自動出力</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                  <span>確度別リード・ステータス管理</span>
                 </div>
               </div>
             </div>
@@ -139,22 +221,22 @@ export default function PortalHomePage() {
             <div>
               <Link
                 href="/dashboard"
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-xs group-hover:bg-emerald-600 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-xs group-hover:bg-blue-600 cursor-pointer"
               >
                 <span>営業促進を開く</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </Link>
               <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
-                <Link href="/orders" className="hover:text-slate-800 font-bold text-emerald-700 transition-colors">受発注管理</Link>
+                <Link href="/leads" className="hover:text-slate-800 transition-colors">リード一覧</Link>
                 <span>·</span>
-                <Link href="/order" target="_blank" className="hover:text-slate-800 transition-colors">発注ポータル ↗</Link>
+                <Link href="/samples" className="hover:text-slate-800 transition-colors">サンプル管理</Link>
                 <span>·</span>
                 <Link href="/discover" className="hover:text-slate-800 transition-colors">店舗収集</Link>
               </div>
             </div>
           </div>
 
-          {/* Card 2: レシピ原価管理 (COST LAB) */}
+          {/* Card 3: レシピ原価管理 (COST LAB) */}
           <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
             <div>
               {/* Card Header Icon & Badge */}
@@ -179,7 +261,7 @@ export default function PortalHomePage() {
               <div className="space-y-2 mb-6 border-t border-slate-100 pt-4 text-[11px] text-slate-600">
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                  <span>🍨 100gカップ ⇔ 📦 2Lバルク切替</span>
+                  <span>100gカップ ⇔ 2Lバルク切替</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
@@ -187,7 +269,7 @@ export default function PortalHomePage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                  <span>原材料29種＆包装資材マスター</span>
+                  <span>原材料マスター（暫定フラグ機能）</span>
                 </div>
               </div>
             </div>
@@ -211,12 +293,8 @@ export default function PortalHomePage() {
             </div>
           </div>
 
-          {/* Card 3: 直営店舗 経営分析 (STORE LAB) - 新設！ */}
-          <div className="bg-white rounded-2xl border-2 border-amber-300 p-6 shadow-xs hover:shadow-md hover:border-amber-400 transition-all duration-200 flex flex-col justify-between group relative overflow-hidden">
-            <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500 to-amber-400 text-slate-950 font-bold text-[9px] px-3 py-0.5 rounded-bl-lg tracking-wider">
-              NEW MODE
-            </div>
-
+          {/* Card 4: 直営店舗 経営分析 (STORE LAB) */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group relative overflow-hidden">
             <div>
               {/* Card Header Icon & Badge */}
               <div className="flex items-center justify-between mb-4">
@@ -233,7 +311,7 @@ export default function PortalHomePage() {
                 店舗経営分析 <span className="text-xs font-semibold text-slate-400 font-mono ml-1">STORE LAB</span>
               </h2>
               <p className="text-xs text-slate-500 leading-relaxed mb-5">
-                AirレジCSVをドロップするだけで3年半の季節トレンド・商品盛衰・成長鈍化の真因（客数・買上点数・看板商品の踊り場）を科学的に特定。
+                AirレジCSVをドロップするだけで3年半の季節トレンド・商品盛衰・成長鈍化の真因（客数・買上点数）を科学的に特定。
               </p>
 
               {/* Feature List */}
@@ -257,7 +335,7 @@ export default function PortalHomePage() {
             <div>
               <Link
                 href="/store"
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-all shadow-xs cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-xs group-hover:bg-amber-500 group-hover:text-slate-950 cursor-pointer"
               >
                 <span>店舗経営分析を開く</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
