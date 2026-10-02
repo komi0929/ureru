@@ -30,7 +30,8 @@ import {
   Layers,
   ChevronRight,
   ShieldCheck,
-  RotateCcw
+  RotateCcw,
+  ArrowDown
 } from 'lucide-react';
 import { getRecipes, getUniformPricing } from '@/lib/cost-api';
 import { Recipe } from '@/types/cost';
@@ -50,6 +51,10 @@ import {
   calculateShippingBreakdown,
   PACKAGING_HANDLING_FEE,
   BULK_PRICING,
+  getEstimatedShippingDate,
+  getMinDeliveryDate,
+  getDeliveryLeadDays,
+  searchAddressByZip,
   getMinShippingDate, 
   createB2BOrder, 
   getB2BOrders,
@@ -95,14 +100,19 @@ export default function CustomerOrderPage() {
     is_member: true,
   });
 
+  // 郵便番号検索ステート
+  const [isSearchingZip, setIsSearchingZip] = useState(false);
+
   // ログイン状態
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<'order' | 'history'>('order');
   const [orderHistory, setOrderHistory] = useState<B2BOrder[]>([]);
 
-  // 配送日時
-  const minShippingDate = useMemo(() => getMinShippingDate(), []);
-  const [shippingDate, setShippingDate] = useState<string>(minShippingDate);
+  // 配送日程（出荷予定日：3営業日以内に出荷、お届け希望日：ヤマト配送日数後）
+  const estimatedShippingDate = useMemo(() => getEstimatedShippingDate(), []);
+  const minDeliveryDate = useMemo(() => getMinDeliveryDate(customer.prefecture), [customer.prefecture]);
+  const [deliveryTimingMode, setDeliveryTimingMode] = useState<'asap' | 'date'>('asap'); // 'asap': 最短お届け, 'date': 日付指定
+  const [preferredDeliveryDate, setPreferredDeliveryDate] = useState<string>('');
   const [deliveryTimeSlot, setDeliveryTimeSlot] = useState<string>(YAMATO_DELIVERY_TIME_SLOTS[0]);
 
   // 発注完了状態
@@ -190,6 +200,11 @@ export default function CustomerOrderPage() {
     return cartItems.reduce((sum, item) => sum + item.total_volume_liters, 0);
   }, [cartItems]);
 
+  // 総本数
+  const totalBottles = useMemo(() => {
+    return cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  }, [cartItems]);
+
   // 商品合計金額 (税込)
   const subtotal = useMemo(() => {
     return cartItems.reduce((sum, item) => sum + item.subtotal, 0);
@@ -228,6 +243,31 @@ export default function CustomerOrderPage() {
     setCustomer(prev => ({ ...prev, is_member: false }));
   };
 
+  // 都道府県変更時にお届け希望日が最小配送可能日より前なら補正
+  useEffect(() => {
+    if (preferredDeliveryDate && preferredDeliveryDate < minDeliveryDate) {
+      setPreferredDeliveryDate(minDeliveryDate);
+    }
+  }, [customer.prefecture, minDeliveryDate, preferredDeliveryDate]);
+
+  // 郵便番号入力時の住所自動補完
+  const handleZipCodeChange = async (val: string) => {
+    setCustomer(prev => ({ ...prev, postal_code: val }));
+    const clean = val.replace(/[^0-9]/g, '');
+    if (clean.length === 7) {
+      setIsSearchingZip(true);
+      const res = await searchAddressByZip(clean);
+      if (res) {
+        setCustomer(prev => ({
+          ...prev,
+          prefecture: res.prefecture,
+          city: res.address,
+        }));
+      }
+      setIsSearchingZip(false);
+    }
+  };
+
   // 注文実行
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,6 +283,10 @@ export default function CustomerOrderPage() {
     setIsSubmitting(true);
 
     try {
+      const actualDeliveryDate = deliveryTimingMode === 'asap' 
+        ? minDeliveryDate 
+        : (preferredDeliveryDate || minDeliveryDate);
+
       const orderData = {
         customer,
         items: cartItems,
@@ -253,8 +297,8 @@ export default function CustomerOrderPage() {
           box_count: appliedBoxCount,
           shipping_fee: shippingFee,
           breakdown: shippingBreakdown || undefined,
-          estimated_shipping_date: shippingDate,
-          preferred_delivery_date: shippingDate,
+          estimated_shipping_date: estimatedShippingDate, // 3営業日以内に出荷
+          preferred_delivery_date: actualDeliveryDate,     // お届け希望日
           delivery_time_slot: deliveryTimeSlot,
         },
         grand_total: grandTotal,
@@ -333,12 +377,14 @@ export default function CustomerOrderPage() {
               <span className="text-slate-800">{submittedOrder.customer.contact_name} 様</span>
             </div>
             <div className="flex justify-between border-b border-slate-200/70 pb-2">
-              <span className="text-slate-500">発送予定日（最短3営業日後）</span>
-              <span className="font-semibold text-slate-900">{submittedOrder.shipping.estimated_shipping_date}</span>
+              <span className="text-slate-500">発送予定</span>
+              <span className="font-semibold text-slate-900">{submittedOrder.shipping.estimated_shipping_date}（3営業日以内に福岡より出荷）</span>
             </div>
             <div className="flex justify-between border-b border-slate-200/70 pb-2">
-              <span className="text-slate-500">ヤマト配送時間帯指定</span>
-              <span className="text-slate-800">{submittedOrder.shipping.delivery_time_slot}</span>
+              <span className="text-slate-500">お届け希望日・時間帯</span>
+              <span className="font-semibold text-emerald-800">
+                {submittedOrder.shipping.preferred_delivery_date || '最短配達'} ({submittedOrder.shipping.delivery_time_slot})
+              </span>
             </div>
             <div className="flex justify-between border-b border-slate-200/70 pb-2">
               <span className="text-slate-500">発送サイズ / 便種</span>
@@ -372,7 +418,7 @@ export default function CustomerOrderPage() {
               ・決済は【月末締め・翌月末払いの請求書発行】となります。当月末にまとめて請求書PDFをお送りいたします。
             </p>
             <p>
-              ・発送完了後、ヤマト運輸の送り状番号（追跡番号）をご登録のメールアドレスへお知らせいたします。
+              ・福岡の製造所より3営業日以内に発送後、ヤマト運輸の送り状番号（追跡番号）をご登録のメールアドレスへお知らせいたします。
             </p>
           </div>
 
@@ -402,7 +448,7 @@ export default function CustomerOrderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/70 py-8 px-4 sm:px-6 lg:px-8 font-sans pb-24">
+    <div className="min-h-screen bg-slate-50/70 py-8 px-4 sm:px-6 lg:px-8 font-sans pb-32">
       <div className="max-w-6xl mx-auto space-y-6">
 
         {/* ── Top Header ── */}
@@ -421,7 +467,7 @@ export default function CustomerOrderPage() {
               業務用バルクアイス オンライン発注
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 max-w-2xl leading-relaxed">
-              100%植物性・グルテンフリーの米粉クラフトアイス（1L / 2L業務用バルク容器）。ヤマト運輸冷凍クール便にて、最短3営業日でお店へ直送いたします。
+              100%植物性・グルテンフリーの米粉クラフトアイス（1L / 2L業務用バルク容器）。ご注文確定から3営業日以内に福岡よりヤマト冷凍便にて出荷いたします（お届け希望日時指定可能）。
             </p>
           </div>
 
@@ -565,19 +611,21 @@ export default function CustomerOrderPage() {
                               type="button"
                               onClick={() => updateCartQuantity(recipe, '2L', -1)}
                               disabled={qty2L === 0}
-                              className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center font-bold text-xs shadow-2xs cursor-pointer"
+                              aria-label="2Lを1本減らす"
+                              className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center font-bold text-sm shadow-2xs cursor-pointer active:scale-95"
                             >
-                              <Minus className="w-3.5 h-3.5" />
+                              <Minus className="w-4 h-4" />
                             </button>
-                            <span className="w-6 text-center font-mono font-bold text-xs text-slate-900">
+                            <span className="w-7 text-center font-mono font-bold text-sm text-slate-900">
                               {qty2L}
                             </span>
                             <button
                               type="button"
                               onClick={() => updateCartQuantity(recipe, '2L', 1)}
-                              className="w-7 h-7 rounded-lg bg-slate-900 text-white hover:bg-slate-800 flex items-center justify-center font-bold text-xs shadow-2xs cursor-pointer active:scale-95"
+                              aria-label="2Lを1本増やす"
+                              className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-slate-900 text-white hover:bg-slate-800 flex items-center justify-center font-bold text-sm shadow-2xs cursor-pointer active:scale-95"
                             >
-                              <Plus className="w-3.5 h-3.5" />
+                              <Plus className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
@@ -604,19 +652,21 @@ export default function CustomerOrderPage() {
                               type="button"
                               onClick={() => updateCartQuantity(recipe, '1L', -1)}
                               disabled={qty1L === 0}
-                              className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center font-bold text-xs shadow-2xs cursor-pointer"
+                              aria-label="1Lを1本減らす"
+                              className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center font-bold text-sm shadow-2xs cursor-pointer active:scale-95"
                             >
-                              <Minus className="w-3.5 h-3.5" />
+                              <Minus className="w-4 h-4" />
                             </button>
-                            <span className="w-6 text-center font-mono font-bold text-xs text-slate-900">
+                            <span className="w-7 text-center font-mono font-bold text-sm text-slate-900">
                               {qty1L}
                             </span>
                             <button
                               type="button"
                               onClick={() => updateCartQuantity(recipe, '1L', 1)}
-                              className="w-7 h-7 rounded-lg bg-slate-900 text-white hover:bg-slate-800 flex items-center justify-center font-bold text-xs shadow-2xs cursor-pointer active:scale-95"
+                              aria-label="1Lを1本増やす"
+                              className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-slate-900 text-white hover:bg-slate-800 flex items-center justify-center font-bold text-sm shadow-2xs cursor-pointer active:scale-95"
                             >
-                              <Plus className="w-3.5 h-3.5" />
+                              <Plus className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
@@ -636,28 +686,83 @@ export default function CustomerOrderPage() {
                   </h3>
                 </div>
 
+                {/* 発送目安の案内バナー */}
+                <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/80 text-xs text-blue-950 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-blue-900">
+                    <Truck className="w-4 h-4 text-blue-600" />
+                    <span>発送目安：ご注文確定より 3営業日以内に福岡より発送（土日祝除く）</span>
+                  </div>
+                  <p className="text-[11px] text-blue-800/90 leading-relaxed">
+                    最短発送予定：<strong className="font-mono font-bold text-blue-950">{estimatedShippingDate} 頃に出荷</strong>
+                    （ヤマト冷凍クール便にて、お届け先エリアに応じて出荷日の翌日〜翌々日に到着いたします）
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  {/* 最短発送日 */}
-                  <div className="space-y-1.5">
+                  {/* お届け希望日の指定 */}
+                  <div className="space-y-2">
                     <label className="font-bold text-slate-700 flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-slate-400" />
-                      発送予定日（最短 3営業日以降）*
+                      お届け希望日（店舗到着日）*
                     </label>
-                    <input
-                      type="date"
-                      required
-                      min={minShippingDate}
-                      value={shippingDate}
-                      onChange={(e) => setShippingDate(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                    />
-                    <p className="text-[11px] text-slate-400">
-                      ※土日祝を除く3営業日以降に福岡より発送いたします。
-                    </p>
+
+                    {/* 最短 vs 日付指定のトグル */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryTimingMode('asap')}
+                        className={`py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all cursor-pointer ${
+                          deliveryTimingMode === 'asap'
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        最短でお届け
+                        <span className={`block text-[10px] font-normal font-mono ${deliveryTimingMode === 'asap' ? 'text-slate-300' : 'text-slate-400'}`}>
+                          ({minDeliveryDate}着 目安)
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeliveryTimingMode('date');
+                          if (!preferredDeliveryDate) {
+                            setPreferredDeliveryDate(minDeliveryDate);
+                          }
+                        }}
+                        className={`py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all cursor-pointer ${
+                          deliveryTimingMode === 'date'
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        日付を指定する
+                        <span className={`block text-[10px] font-normal ${deliveryTimingMode === 'date' ? 'text-slate-300' : 'text-slate-400'}`}>
+                          カレンダーで指定
+                        </span>
+                      </button>
+                    </div>
+
+                    {deliveryTimingMode === 'date' && (
+                      <div className="space-y-1 pt-1 animate-in fade-in">
+                        <input
+                          type="date"
+                          required
+                          min={minDeliveryDate}
+                          value={preferredDeliveryDate || minDeliveryDate}
+                          onChange={(e) => setPreferredDeliveryDate(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                        <p className="text-[11px] text-slate-400">
+                          ※{customer.prefecture}への最短配送可能日は {minDeliveryDate} 以降となります。
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* ヤマト配達時間帯指定 */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <label className="font-bold text-slate-700 flex items-center gap-1.5">
                       <Clock className="w-4 h-4 text-slate-400" />
                       配達希望時間帯（ヤマト公式）*
@@ -671,8 +776,8 @@ export default function CustomerOrderPage() {
                         <option key={slot} value={slot}>{slot}</option>
                       ))}
                     </select>
-                    <p className="text-[11px] text-slate-400">
-                      ※仕込み・仕入れ時間に合わせてご指定いただけます。
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      ※店舗の仕込み時間やアイドルタイムに合わせてご指定いただけます。
                     </p>
                   </div>
                 </div>
@@ -734,7 +839,7 @@ export default function CustomerOrderPage() {
               </div>
 
               {/* ── お客様情報入力 ── */}
-              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs space-y-4">
+              <div id="order-form-details" className="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs space-y-4 scroll-mt-20">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2">
                     <Building2 className="w-5 h-5 text-slate-700" />
@@ -758,7 +863,7 @@ export default function CustomerOrderPage() {
                       placeholder="例: カフェ・グリーン 福岡店"
                       value={customer.store_name}
                       onChange={(e) => setCustomer({ ...customer, store_name: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 font-medium"
+                      className="w-full px-3.5 py-3 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 font-medium text-sm sm:text-xs"
                     />
                   </div>
 
@@ -770,7 +875,7 @@ export default function CustomerOrderPage() {
                       placeholder="例: 山田 太郎"
                       value={customer.contact_name}
                       onChange={(e) => setCustomer({ ...customer, contact_name: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 font-medium"
+                      className="w-full px-3.5 py-3 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 font-medium text-sm sm:text-xs"
                     />
                   </div>
 
@@ -779,10 +884,11 @@ export default function CustomerOrderPage() {
                     <input
                       type="email"
                       required
+                      inputMode="email"
                       placeholder="example@cafe.jp"
                       value={customer.email}
                       onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 font-medium font-mono"
+                      className="w-full px-3.5 py-3 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 font-medium font-mono text-sm sm:text-xs"
                     />
                   </div>
 
@@ -791,24 +897,36 @@ export default function CustomerOrderPage() {
                     <input
                       type="tel"
                       required
+                      inputMode="tel"
                       placeholder="092-123-4567"
                       value={customer.phone}
                       onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 font-medium font-mono"
+                      className="w-full px-3.5 py-3 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 font-medium font-mono text-sm sm:text-xs"
                     />
                   </div>
 
                   <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block font-bold text-slate-700 mb-1">郵便番号 *</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">郵便番号 (7桁) *</label>
+                        {isSearchingZip && (
+                          <span className="text-[10px] text-emerald-600 font-semibold animate-pulse">
+                            住所検索中...
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="text"
                         required
-                        placeholder="810-0041"
+                        inputMode="numeric"
+                        placeholder="8100041 (ハイフンなし可)"
                         value={customer.postal_code}
-                        onChange={(e) => setCustomer({ ...customer, postal_code: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 font-mono"
+                        onChange={(e) => handleZipCodeChange(e.target.value)}
+                        className="w-full px-3.5 py-3 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 font-mono text-sm sm:text-xs"
                       />
+                      <span className="text-[10px] text-slate-400 mt-0.5 block">
+                        ※入力すると住所が自動入力されます
+                      </span>
                     </div>
 
                     <div>
@@ -816,7 +934,7 @@ export default function CustomerOrderPage() {
                       <select
                         value={customer.prefecture}
                         onChange={(e) => setCustomer({ ...customer, prefecture: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 font-bold text-slate-800 cursor-pointer"
+                        className="w-full px-3.5 py-3 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 font-bold text-slate-800 cursor-pointer text-sm sm:text-xs"
                       >
                         {PREFECTURES.map(pref => (
                           <option key={pref} value={pref}>{pref}</option>
@@ -825,14 +943,14 @@ export default function CustomerOrderPage() {
                     </div>
 
                     <div>
-                      <label className="block font-bold text-slate-700 mb-1">市区町村 *</label>
+                      <label className="block font-bold text-slate-700 mb-1">市区町村・町名 *</label>
                       <input
                         type="text"
                         required
                         placeholder="福岡市中央区大名"
                         value={customer.city}
                         onChange={(e) => setCustomer({ ...customer, city: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                        className="w-full px-3.5 py-3 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 text-sm sm:text-xs"
                       />
                     </div>
                   </div>
@@ -845,7 +963,7 @@ export default function CustomerOrderPage() {
                       placeholder="1-2-3 メゾン大名 1F"
                       value={customer.address_line}
                       onChange={(e) => setCustomer({ ...customer, address_line: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                      className="w-full px-3.5 py-3 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 text-sm sm:text-xs"
                     />
                   </div>
 
@@ -880,7 +998,7 @@ export default function CustomerOrderPage() {
 
             {/* 右側: 発注サマリー・カート・送信ボタン（固定追従） */}
             <div className="lg:col-span-1 space-y-5 sticky top-6">
-              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-md space-y-5">
+              <div id="order-summary-box" className="bg-white rounded-3xl p-6 border border-slate-200 shadow-md space-y-5 scroll-mt-20">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
                     <ShoppingBag className="w-4 h-4 text-emerald-600" />
@@ -1098,9 +1216,12 @@ export default function CustomerOrderPage() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-[11px] text-slate-400 block">発送予定 / 希望時間帯</span>
-                        <span className="text-slate-800">
-                          {order.shipping.estimated_shipping_date} ({order.shipping.delivery_time_slot})
+                        <span className="text-[11px] text-slate-400 block">お届け希望 / 発送予定</span>
+                        <span className="font-semibold text-emerald-800">
+                          {order.shipping.preferred_delivery_date || '最短配達'}
+                        </span>
+                        <span className="text-[10px] text-slate-500 block">
+                          出荷予定: {order.shipping.estimated_shipping_date} ({order.shipping.delivery_time_slot})
                         </span>
                       </div>
                       <div className="text-right sm:text-left md:text-right">
@@ -1138,6 +1259,48 @@ export default function CustomerOrderPage() {
         )}
 
       </div>
+
+      {/* ── スマホ専用: 下部追従フローティング注文バー (Bottom Sticky Bar) ── */}
+      {activeTab === 'order' && cartItems.length > 0 && (
+        <aside aria-label="注文内容の小計" className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] px-4 py-3 pb-safe">
+          <div className="max-w-md mx-auto flex items-center justify-between gap-3">
+            <div 
+              onClick={() => {
+                document.getElementById('order-summary-box')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="flex-1 cursor-pointer"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  計 {totalBottles}本 ({totalLiters}ℓ)
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  {appliedBoxSize}サイズ
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className="text-lg font-black text-slate-900 font-mono tracking-tight">
+                  ¥{grandTotal.toLocaleString()}
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium">
+                  (税込・送料込)
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                document.getElementById('order-form-details')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/25 active:scale-95 flex items-center gap-1.5 shrink-0 transition-transform cursor-pointer"
+            >
+              <span>注文手続きへ</span>
+              <ArrowDown className="w-3.5 h-3.5 animate-bounce" />
+            </button>
+          </div>
+        </aside>
+      )}
     </div>
   );
 }

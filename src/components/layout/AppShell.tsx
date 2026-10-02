@@ -11,8 +11,8 @@ import StoreSidebar from '@/components/store/StoreSidebar';
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // 1. TOPポータルハブ画面の場合（フルスクリーン）
-  if (pathname === '/') {
+  // 1. TOPポータルハブ画面 ＆ お客様向け発注ポータル（フルスクリーン・スタンドアロン）
+  if (pathname === '/' || pathname === '/order') {
     return (
       <div className="min-h-screen w-full bg-slate-50/60 text-slate-900 flex flex-col">
         {children}

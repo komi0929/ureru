@@ -136,16 +136,18 @@ export default function OrdersPage() {
 
   const lineTemplate = `【SoyStories】業務用クラフトアイス オンライン発注のご案内
 
-いつもお世話になっております。SoyStoriesです。
-当店の業務用大豆クラフトアイス（1L / 2L バルク）のオンライン発注ポータルを開設いたしました。
+いつも大変お世話になっております。SoyStoriesです。
+当店の業務用米粉クラフトアイス（1L / 2L バルク）のオンライン発注ポータルを開設いたしました。
 
-以下のURLより、24時間いつでも簡単に発注いただけます。
+以下の専用URLより、スマートフォンやPCから24時間いつでも簡単に発注いただけます。
 👉 ${customOrderUrl}
 
-・ヤマト運輸 冷凍クール便にて最短3営業日でお店へ直送
-・月末締めの一括請求書払い（銀行振込）
+・卸価格: 1mℓ＝2円税抜（1L: ¥2,000+税 / 2L: ¥4,000+税）
+・発送目安: ご注文確定より3営業日以内に福岡よりヤマト冷凍便にて発送（お届け希望日時指定可能）
+・お支払い: 月末締め・翌月末払いの請求書払い（銀行振込）
 
-ご不明な点はお気軽にご連絡ください！`;
+仕込みや営業の合間にぜひご活用ください！
+ご不明な点はお気軽にご連絡ください。`;
 
   const emailTemplate = `件名: 【SoyStories】業務用クラフトアイス オンライン発注システムのご案内
 
@@ -157,13 +159,15 @@ SoyStories（ソイストーリーズ）でございます。
 
 この度、お取引先様専用のオンライン発注ポータルを開設いたしました。
 以下のURLより、24時間いつでもご希望のフレーバー・容量（1L / 2L）をご発注いただけます。
+スマートフォンからも快適にご利用いただけます。
 
 ■ オンライン発注ポータルURL
 ${customOrderUrl}
 
-■ 配送・決済条件
+■ 卸価格・配送・決済条件
+・卸価格: 1mℓ 2円税抜（1L: ¥2,000+税 / 2L: ¥4,000+税・全10フレーバー）
 ・配送方法: ヤマト運輸 クール宅急便（冷凍）
-・発送目安: ご発注より最短3営業日以降に福岡より発送（配送日時・時間帯指定可能）
+・発送目安: ご注文確定より3営業日以内に福岡より発送（お届け希望日時指定可能）
 ・お支払い: 月末締め・翌月末払いの請求書払い（銀行振込）
 
 店舗様での食後デザートやメニュー展開に、ぜひご活用いただけますと幸いです。
@@ -361,11 +365,11 @@ ${customOrderUrl}
                           <Truck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                           <span>{order.shipping.box_size}サイズ (クール冷凍)</span>
                         </div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
-                          発送予定: {order.shipping.estimated_shipping_date}
+                        <div className="text-[11px] text-slate-800 mt-0.5">
+                          お届け希望: <strong className="text-emerald-800">{order.shipping.preferred_delivery_date || '最短配達'}</strong>
                         </div>
-                        <div className="text-[10px] text-slate-400">
-                          時間指定: {order.shipping.delivery_time_slot}
+                        <div className="text-[10px] text-slate-500">
+                          出荷予定: {order.shipping.estimated_shipping_date} ({order.shipping.delivery_time_slot})
                         </div>
                         {order.shipping.tracking_number ? (
                           <div className="text-[11px] font-mono text-emerald-700 font-bold mt-1">
@@ -646,8 +650,9 @@ ${customOrderUrl}
                 </span>
                 
                 <div className="grid grid-cols-2 gap-2 text-slate-700">
-                  <div>発送予定日: <strong className="font-mono">{selectedOrder.shipping.estimated_shipping_date}</strong></div>
-                  <div>時間指定: <strong>{selectedOrder.shipping.delivery_time_slot}</strong></div>
+                  <div>出荷予定日: <strong className="font-mono">{selectedOrder.shipping.estimated_shipping_date}</strong>（3営業日以内）</div>
+                  <div>お届け希望日: <strong className="font-mono text-emerald-800">{selectedOrder.shipping.preferred_delivery_date || '最短配達'}</strong></div>
+                  <div className="col-span-2">配達時間指定: <strong>{selectedOrder.shipping.delivery_time_slot}</strong></div>
                 </div>
 
                 <div className="pt-2 border-t border-blue-200/80 space-y-1.5">

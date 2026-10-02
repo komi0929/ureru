@@ -267,9 +267,34 @@ export function getShippingFee(
 }
 
 /**
- * 最短発送日を計算（本日より土日祝を除いた3営業日後）
+ * 福岡からのヤマト冷凍便 所要配送日数（リードタイム）
+ * 九州・中国・関西・四国: 翌日配達 (1日)
+ * 中部・北陸・関東・信越: 翌々日配達 (2日)
+ * 東北・北海道・沖縄: 翌々日〜3日後配達 (3日)
  */
-export function getMinShippingDate(fromDate: Date = new Date()): string {
+export function getDeliveryLeadDays(prefecture: string): number {
+  if (!prefecture) return 1;
+  const p = prefecture.trim();
+  const nextDay = [
+    '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県',
+    '山口県', '広島県', '岡山県', '島根県', '鳥取県',
+    '香川県', '徳島県', '愛媛県', '高知県',
+    '大阪府', '兵庫県', '京都府', '滋賀県', '奈良県', '和歌山県'
+  ];
+  if (nextDay.some(pref => p.includes(pref.replace(/都|府|県/, '')))) {
+    return 1;
+  }
+  const threeDays = ['北海道', '青森県', '秋田県', '岩手県', '沖縄県'];
+  if (threeDays.some(pref => p.includes(pref.replace(/都|府|県/, '')))) {
+    return 3;
+  }
+  return 2; // 関東、中部、北陸、信越、南東北
+}
+
+/**
+ * 発送予定日を計算（ご注文確定から3営業日以内に福岡より出荷、土日祝除く）
+ */
+export function getEstimatedShippingDate(fromDate: Date = new Date()): string {
   let count = 0;
   const current = new Date(fromDate);
 
@@ -282,11 +307,52 @@ export function getMinShippingDate(fromDate: Date = new Date()): string {
     }
   }
 
-  // YYYY-MM-DD 形式
   const year = current.getFullYear();
   const month = String(current.getMonth() + 1).padStart(2, '0');
   const date = String(current.getDate()).padStart(2, '0');
   return `${year}-${month}-${date}`;
+}
+
+// 既存互換用エイリアス
+export const getMinShippingDate = getEstimatedShippingDate;
+
+/**
+ * 最短お届け希望日を計算（発送予定日 + ヤマト地域別リードタイム）
+ */
+export function getMinDeliveryDate(prefecture: string, fromDate: Date = new Date()): string {
+  const shipDateStr = getEstimatedShippingDate(fromDate);
+  const target = new Date(shipDateStr);
+  const leadDays = getDeliveryLeadDays(prefecture);
+  target.setDate(target.getDate() + leadDays);
+
+  const year = target.getFullYear();
+  const month = String(target.getMonth() + 1).padStart(2, '0');
+  const date = String(target.getDate()).padStart(2, '0');
+  return `${year}-${month}-${date}`;
+}
+
+/**
+ * 郵便番号（7桁）から住所（都道府県・市区町村・町域）を自動取得
+ */
+export async function searchAddressByZip(zip: string): Promise<{ prefecture: string; address: string } | null> {
+  const cleanZip = zip.replace(/[^0-9]/g, '');
+  if (cleanZip.length !== 7) return null;
+
+  try {
+    const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${cleanZip}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data && data.results && data.results.length > 0) {
+      const item = data.results[0];
+      return {
+        prefecture: item.address1 || '',
+        address: `${item.address2 || ''}${item.address3 || ''}`,
+      };
+    }
+  } catch {
+    // ネットワークエラー等時はnull
+  }
+  return null;
 }
 
 // ============================================================
