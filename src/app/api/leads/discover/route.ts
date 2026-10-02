@@ -5,13 +5,20 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { location = '福岡市', keywords = ['カフェ', 'ヴィーガン'], limit = 15, autoSave = true } = body;
+    const { 
+      location = '全国', 
+      keywords = ['ヴィーガン', 'ラーメン'], 
+      limit = 15, 
+      autoSave = true,
+      category
+    } = body;
 
     // 店舗Instagramアカウントを自動検索
     const discovered = await findInstagramLeads({
       location,
       keywords: Array.isArray(keywords) ? keywords : [keywords],
       limit: Number(limit) || 15,
+      category,
     });
 
     let savedCount = 0;
@@ -44,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      query: { location, keywords, limit },
+      query: { location, keywords, limit, category },
       total_found: discovered.length,
       saved_to_db: savedCount,
       leads: discovered,

@@ -9,51 +9,57 @@ export interface DmTemplateConfig {
 }
 
 export const BUSINESS_REASONS: Record<string, string> = {
-  'カフェ': '素敵なメニューへのこだわり',
-  'レストラン': 'お料理への情熱',
+  'ラーメン': 'こだわり抜かれたヴィーガンラーメンへの熱い想い',
+  'カレー': 'スパイス香る本格的なカレー作りへのこだわり',
+  'バーガー': '満足感とヘルシーさを両立されたバーガーへの情熱',
+  'ホテル': '国内外のゲストを迎える上質なおもてなしへの姿勢',
+  'カフェ': '素敵なメニューや空間作りへのこだわり',
+  'レストラン': 'お料理とお客様への情熱',
   'ベーカリー': '美味しいパン作りへのこだわり',
-  'ホテル': '上質なおもてなしへの姿勢',
   'デリ': '体に優しい食へのこだわり',
   'バー': '独自の空間作りへのこだわり',
   'default': '素敵なお店作りへのこだわり',
 };
 
 export const BUSINESS_BENEFITS: Record<string, string> = {
-  'カフェ': 'カフェメニューの差別化に最適です',
-  'レストラン': 'デザートメニューの付加価値向上に繋がります',
-  'ベーカリー': 'パンに合うトッピングとしてお客様に喜ばれています',
-  'ホテル': '宴会・ビュッフェのデザートに最適です',
-  'default': 'アレルギー対応メニューとして新しいお客様層を開拓できます',
+  'ラーメン': '熱々のラーメンを食べた後の「さっぱりしたお口直し」や、外国人観光客向けの「客単価アップメニュー（+500円デザート）」に最適です。個包装カップのため厨房オペレーションの負荷もゼロで導入いただけます',
+  'カレー': 'スパイシーなカレーを食べたあとの「クールダウン豆乳アイス」としてお客様に大好評です',
+  'バーガー': 'バーガーやポテトとのセットメニュー、ギルトフリーなデザートとして相性抜群です',
+  'ホテル': '訪日外国人宿泊客から要望の多いアレルギー・ヴィーガン対応デザートとして、冷凍ストックでロスなくご活用いただけます',
+  'カフェ': 'カフェメニューの差別化やアレルギー対応の目玉に最適です',
+  'レストラン': 'デザートメニューの付加価値向上とヴィーガン対応に繋がります',
+  'ベーカリー': 'パンに合うトッピングやテイクアウトスイーツとして喜ばれています',
+  'default': 'アレルギー・ヴィーガン対応メニューとして新しいお客様層を開拓できます',
 };
 
 export function getTemplates(): DmTemplateConfig[] {
   return [
     {
       id: 'initial_a',
-      name: '初回コンタクトA (シンプル)',
+      name: '初回コンタクトA (熱意・メリット訴求型)',
       category: 'initial_contact',
-      template: 'こんにちは！{{store_name}}さんの投稿を拝見して、{{reason}}と感じてご連絡しました。\n\n私たちはSoyStoriesという、100%プラントベース・グルテンフリーのアイスクリームを作っています🌿\n\nもしよろしければ、無料サンプルをお送りしますので、お気軽にご返信ください😊\n\nhttps://www.soystories.cafe/',
-      variables: ['store_name', 'reason']
+      template: 'こんにちは！{{store_name}}さんのInstagramを拝見して、{{reason}}を感じてご連絡いたしました。\n\n私たちは「SoyStories」という、福岡発の100%植物性・グルテンフリーの濃厚大豆クラフトアイスをお届けしています🌿\n\n{{benefit}}。\n\nもしよろしければ、お店のスタッフ様でご試食用に【無料サンプルセット】をクール便でお届けさせていただけないでしょうか？😊\n\nご興味ありましたら、ぜひお気軽にご返信ください！\nhttps://www.soystories.cafe/',
+      variables: ['store_name', 'reason', 'benefit']
     },
     {
       id: 'initial_b',
-      name: '初回コンタクトB (商品特徴訴求)',
+      name: '初回コンタクトB (簡潔・サンプル直球型)',
       category: 'initial_contact',
-      template: '突然のご連絡失礼いたします。{{store_name}}さんの素敵なお店に惹かれてDMさせていただきました。\n\n豆乳ベースのアイス「SoyStories」は、乳製品・小麦不使用で{{benefit}}。\n6種のフレーバーを用意しており、無料サンプルもお送りできます🍨\n\nhttps://www.soystories.cafe/',
+      template: '突然のご連絡失礼いたします。{{store_name}}さんの素敵なお取り組みに惹かれてDMさせていただきました。\n\n豆乳クラフトアイス「SoyStories」は、乳・卵・小麦不使用で、{{benefit}}。\n\n現在、店舗様向けに無料サンプル（人気6種フレーバー）を無償配送しております🍨\nお忙しいところ恐れ入りますが、ぜひ一度お味見していただけますと幸いです！\n\nhttps://www.soystories.cafe/',
       variables: ['store_name', 'benefit']
     },
     {
       id: 'initial_c',
-      name: '初回コンタクトC (極短)',
+      name: '初回コンタクトC (ショート・SNS親和型)',
       category: 'initial_contact',
-      template: 'こんにちは！プラントベースアイス「SoyStories」と申します🌿\n{{store_name}}さんのお店で使っていただけたらと思いご連絡しました。無料サンプルお送りできますので、ご興味あればお気軽に😊\nhttps://www.soystories.cafe/',
+      template: 'こんにちは！プラントベースアイス「SoyStories」と申します🌿\n{{store_name}}さんのお客様に喜んでいただけそうと思いDMいたしました！\nスタッフ様でお試しいただける無料サンプルをすぐにお手配できますので、もしご興味あれば「サンプル希望」とお気軽に一言ご返信ください😊\nhttps://www.soystories.cafe/',
       variables: ['store_name']
     },
     {
       id: 'follow_up',
-      name: 'フォローアップ (返信なし後1週間)',
+      name: 'フォローアップ (未返信への丁寧な再送)',
       category: 'follow_up',
-      template: '{{store_name}}さん、先日はDM失礼いたしました。\nその後、プラントベースアイスにご興味はいかがでしょうか？\nお忙しいところ恐れ入りますが、ご返信いただけると嬉しいです🌱',
+      template: '{{store_name}}さん、先日は突然のDM失礼いたしました。\nその後、お忙しいところ恐縮ですが、プラントベースアイスの無料サンプルにご興味はいかがでしたでしょうか？🌱\nメニューの拡充やインバウンド対応でお役に立てましたら幸いです。ご負担のない範囲でご返信いただけますと幸いです！',
       variables: ['store_name']
     }
   ];
@@ -70,8 +76,6 @@ export function getBenefitForBusiness(businessType: string): string {
 export function generateDM(template: DmTemplateConfig, lead: Lead): string {
   let content = template.template;
   
-  // Safely cast or get properties since Lead type structure might vary slightly
-  const leadAny = lead as any;
   const storeName = lead.display_name || (lead as any).name || 'ご担当者';
   const businessType = lead.business_type || 'default';
   

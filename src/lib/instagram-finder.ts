@@ -5,6 +5,7 @@ export interface DiscoveryOptions {
   location: string;
   keywords: string[];
   limit?: number;
+  category?: 'ramen' | 'curry' | 'hotel' | 'burger' | 'cafe' | 'all';
 }
 
 export interface DiscoveredLead extends Partial<Lead> {
@@ -18,6 +19,33 @@ const IGNORED_USERNAMES = new Set([
   'developer', 'help', 'privacy', 'terms', 'legal', 'directory',
   'accounts', 'support', 'instagram', 'press'
 ]);
+
+// 業種自動判定
+export function detectBusinessType(name: string, snippet: string): string {
+  const combined = `${name} ${snippet}`.toLowerCase();
+  if (combined.includes('ラーメン') || combined.includes('拉麺') || combined.includes('ramen') || combined.includes('麺') || combined.includes('担々麺')) {
+    return 'ラーメン';
+  }
+  if (combined.includes('カレー') || combined.includes('curry') || combined.includes('スパイス')) {
+    return 'カレー';
+  }
+  if (combined.includes('バーガー') || combined.includes('burger') || combined.includes('ダイナー')) {
+    return 'バーガー';
+  }
+  if (combined.includes('ホテル') || combined.includes('hotel') || combined.includes('ラウンジ') || combined.includes('宿泊')) {
+    return 'ホテル';
+  }
+  if (combined.includes('ベーカリー') || combined.includes('パン') || combined.includes('bakery')) {
+    return 'ベーカリー';
+  }
+  if (combined.includes('レストラン') || combined.includes('ダイニング') || combined.includes('バル')) {
+    return 'レストラン';
+  }
+  if (combined.includes('バー') || combined.includes('bar')) {
+    return 'バー';
+  }
+  return 'カフェ';
+}
 
 // 検索結果のHTMLからInstagramアカウントを抽出
 function extractAccountsFromHtml(html: string, baseLocation: string): Partial<Lead>[] {
@@ -73,17 +101,7 @@ function extractAccountsFromHtml(html: string, baseLocation: string): Partial<Le
     }
 
     // 業種判定
-    let businessType = 'カフェ';
-    const combinedText = `${storeName} ${rawSnippet}`;
-    if (combinedText.includes('レストラン') || combinedText.includes('ダイニング')) {
-      businessType = 'レストラン';
-    } else if (combinedText.includes('ベーカリー') || combinedText.includes('パン')) {
-      businessType = 'ベーカリー';
-    } else if (combinedText.includes('バー') || combinedText.includes('bar')) {
-      businessType = 'バー';
-    } else if (combinedText.includes('ホテル')) {
-      businessType = 'ホテル';
-    }
+    const businessType = detectBusinessType(storeName, rawSnippet);
 
     leads.push({
       instagram_id: `@${username}`,
@@ -93,7 +111,7 @@ function extractAccountsFromHtml(html: string, baseLocation: string): Partial<Le
       profile_text: rawSnippet || `${baseLocation}の${businessType}。こだわりメニューを展開。`,
       business_type: businessType,
       status: 'new',
-      tags: [baseLocation, '自動収集'],
+      tags: [baseLocation, '自動収集', businessType],
       follower_count: null,
       created_at: new Date().toISOString(),
     });
@@ -120,15 +138,209 @@ async function fetchDuckDuckGoHtml(query: string): Promise<string> {
   return await response.text();
 }
 
-// 実在する福岡・九州・全国のオーガニック/ヴィーガン/人気カフェのシードリスト（フォールバック&即応検証用）
-const FALLBACK_SEED_LEADS: Record<string, Partial<Lead>[]> = {
-  '福岡': [
+// 🎯 高確度シードマスターデータベース（即時・高精度フォールバック対応）
+export const HIGH_IMPACT_SEEDS = {
+  // 🍜 全国の有力ヴィーガンラーメン店舗
+  ramen: [
+    {
+      instagram_id: '@ts_tantan_jp',
+      display_name: 'T\'sたんたん（T\'sレストラン）',
+      business_type: 'ラーメン',
+      profile_text: '東京駅・上野駅・池袋等に展開する日本初のヴィーガンラーメン専門店。肉・魚介・卵・乳製品不使用の濃厚担々麺や醤油ラーメンで訪日外国人・健康志向層から圧倒的人気。',
+      instagram_url: 'https://www.instagram.com/ts_tantan_jp',
+      tags: ['全国', '東京', 'ヴィーガンラーメン', 'インバウンド大人気']
+    },
+    {
+      instagram_id: '@vegan_ramen_uzu',
+      display_name: 'Vegan Ramen UZU（東京・京都）',
+      business_type: 'ラーメン',
+      profile_text: 'チームラボとコラボレーションしたミシュランガイド掲載のヴィーガンラーメン店。完全植物性素材のみで引いた極上スープと空間体験で海外旅行客が殺到。',
+      instagram_url: 'https://www.instagram.com/vegan_ramen_uzu',
+      tags: ['全国', '東京', '京都', 'ヴィーガンラーメン', 'ミシュラン']
+    },
+    {
+      instagram_id: '@kyushujangara',
+      display_name: '九州じゃんがら（原宿・秋葉原・銀座）',
+      business_type: 'ラーメン',
+      profile_text: '東京の有名豚骨ラーメン店が本気で開発した完全植物性「ヴィーガンこぼんしゃん」「からぼん」。外国人客のヴィーガン需要に応え大ヒット中。',
+      instagram_url: 'https://www.instagram.com/kyushujangara',
+      tags: ['全国', '東京', 'ヴィーガンラーメン', 'インバウンド対応']
+    },
+    {
+      instagram_id: '@soranoiro.vege',
+      display_name: 'ソラノイロ（SORANOIRO）麹町・東京駅',
+      business_type: 'ラーメン',
+      profile_text: 'ミシュラン・ビブグルマン獲得店。元祖「ベジソバ」や完全ヴィーガン・グルテンフリーラーメンのパイオニア。食後のデザートにもこだわり。',
+      instagram_url: 'https://www.instagram.com/soranoiro.vege',
+      tags: ['全国', '東京', 'ヴィーガンラーメン', 'グルテンフリー']
+    },
+    {
+      instagram_id: '@saido_tokyo',
+      display_name: '菜道（SAIDO）自由が丘',
+      business_type: 'ラーメン',
+      profile_text: '世界一のヴィーガンレストランに選出（HappyCow世界ランキング第1位）。特製ヴィーガンラーメン・まぜそば・和食を提供。外国人客比率90%以上。',
+      instagram_url: 'https://www.instagram.com/saido_tokyo',
+      tags: ['全国', '東京', 'ヴィーガンラーメン', '世界No1']
+    },
+    {
+      instagram_id: '@chabuzen',
+      display_name: '薬膳食堂ちゃぶ屋（下北沢）',
+      business_type: 'ラーメン',
+      profile_text: '完全ヴィーガン＆オーガニックラーメン店。グルテンフリー麺・無化調薬膳スープが海外ヴィーガン客から絶賛。',
+      instagram_url: 'https://www.instagram.com/chabuzen',
+      tags: ['全国', '東京', 'ヴィーガンラーメン', 'オーガニック']
+    },
+    {
+      instagram_id: '@towazen_ramen',
+      display_name: '京都 豆乳ラーメン 豆禅（Towazen）',
+      business_type: 'ラーメン',
+      profile_text: '京都・下鴨のヴィーガン豆乳ラーメン専門店。自家製濃厚豆乳スープと京湯葉を使用。ヴィーガン・ベジタリアン観光客の聖地。',
+      instagram_url: 'https://www.instagram.com/towazen_ramen',
+      tags: ['全国', '京都', 'ヴィーガンラーメン', '豆乳']
+    },
+    {
+      instagram_id: '@halal_vegan_ramen_honolu',
+      display_name: '麺屋 帆のる（Honolu）',
+      business_type: 'ラーメン',
+      profile_text: 'ハラール＆完全ヴィーガン対応ラーメン。特製野菜ポタージュスープで海外ムスリム・ヴィーガン顧客から絶大な信頼。',
+      instagram_url: 'https://www.instagram.com/halal_vegan_ramen_honolu',
+      tags: ['全国', '東京', '大阪', 'ヴィーガンラーメン', 'ハラール']
+    },
+    {
+      instagram_id: '@peace_ramen_kyoto',
+      display_name: 'Vegan Ramen Peace 京都河原町',
+      business_type: 'ラーメン',
+      profile_text: '京都四条河原町の完全植物性ラーメン店。100%ヴィーガンの醤油・味噌・担々麺を提供し、食後のお口直しスイーツの要望多数。',
+      instagram_url: 'https://www.instagram.com/peace_ramen_kyoto',
+      tags: ['全国', '京都', 'ヴィーガンラーメン', '河原町']
+    },
+    {
+      instagram_id: '@afuri_japan',
+      display_name: 'AFURI（阿夫利）',
+      business_type: 'ラーメン',
+      profile_text: '厳選野菜をふんだんに使った彩りヴィーガンらーめんをグローバル展開。スタイリッシュな空間とヘルシー志向な顧客層にマッチ。',
+      instagram_url: 'https://www.instagram.com/afuri_japan',
+      tags: ['全国', '東京', 'ヴィーガンラーメン', 'グローバル']
+    }
+  ],
+
+  // 🍛 スパイスカレー・ヴィーガンカレー店舗
+  curry: [
+    {
+      instagram_id: '@negombo33',
+      display_name: 'negombo33（ネゴンボ33）',
+      business_type: 'カレー',
+      profile_text: '全国屈指の人気スパイスカレー店。スパイスの余韻を楽しむ食後のアイスや珈琲とのペアリングを提案。',
+      instagram_url: 'https://www.instagram.com/negombo33',
+      tags: ['全国', '東京', '埼玉', 'スパイスカレー', 'デザート親和性高']
+    },
+    {
+      instagram_id: '@botanicurry',
+      display_name: 'BOTANI:CURRY（ボタニカリー 大阪）',
+      business_type: 'カレー',
+      profile_text: '大阪スパイスカレーブームの牽引店。ハーブとスパイスの爽快感あふれるカレー。辛味のあとの優しい口直しアイス需要大。',
+      instagram_url: 'https://www.instagram.com/botanicurry',
+      tags: ['全国', '大阪', 'スパイスカレー']
+    },
+    {
+      instagram_id: '@anandacurry',
+      display_name: 'アナンダカリー（完全植物性スパイスカレー）',
+      business_type: 'カレー',
+      profile_text: '動物性食材を一切使わない100%プラントベーススパイスカレー専門店。オーガニック・グルテンフリーにこだわり。',
+      instagram_url: 'https://www.instagram.com/anandacurry',
+      tags: ['全国', 'ヴィーガンカレー', 'グルテンフリー']
+    },
+    {
+      instagram_id: '@garam_fukuoka',
+      display_name: 'GARAM（ガラム 福岡高砂）',
+      business_type: 'カレー',
+      profile_text: '福岡スパイスカレーの超名店。刺激的なスパイスの後味を包み込む豆乳アイスやチャイと好相性。',
+      instagram_url: 'https://www.instagram.com/garam_fukuoka',
+      tags: ['福岡', 'スパイスカレー']
+    },
+    {
+      instagram_id: '@midorishokudo',
+      display_name: '玄米カフェ 実身美（サンミ）',
+      business_type: 'カレー',
+      profile_text: '心と体にやさしい玄米カフェ・レストラン。豆乳スイーツやアレルギー配慮メニュー、健康志向のカレーが名物。',
+      instagram_url: 'https://www.instagram.com/midorishokudo',
+      tags: ['全国', '大阪', '東京', '健康志向', '豆乳スイーツ']
+    }
+  ],
+
+  // 🏨 インバウンド特化ホテル・高級宿泊施設
+  hotel: [
+    {
+      instagram_id: '@acehotelkyoto',
+      display_name: 'Ace Hotel Kyoto（エースホテル京都）',
+      business_type: 'ホテル',
+      profile_text: 'アメリカ発祥の人気ライフスタイルホテル。海外ゲスト比率が非常に高く、ヴィーガン・グルテンフリーのデザート需要が常時発生。',
+      instagram_url: 'https://www.instagram.com/acehotelkyoto',
+      tags: ['全国', '京都', 'ホテル', 'インバウンド']
+    },
+    {
+      instagram_id: '@trunkhotel',
+      display_name: 'TRUNK(HOTEL) 東京・渋谷',
+      business_type: 'ホテル',
+      profile_text: 'ソーシャライジングをコンセプトにするブティックホテル。環境配慮・エシカルな食材や植物性デザートを積極導入。',
+      instagram_url: 'https://www.instagram.com/trunkhotel',
+      tags: ['全国', '東京', 'ホテル', 'サステナブル']
+    },
+    {
+      instagram_id: '@sequence_miyashitapark',
+      display_name: 'sequence MIYASHITA PARK',
+      business_type: 'ホテル',
+      profile_text: '渋谷ミヤシタパーク直結の次世代ホテル。宿泊ラウンジやカフェにて、多様な食文化（ヴィーガン・アレルギー）に対応。',
+      instagram_url: 'https://www.instagram.com/sequence_miyashitapark',
+      tags: ['全国', '東京', 'ホテル', 'ラウンジ']
+    },
+    {
+      instagram_id: '@hotel_the_celestine_tokyo',
+      display_name: 'ホテル ザ セレスティン東京芝',
+      business_type: 'ホテル',
+      profile_text: '上質な空間と国内外ゲストのおもてなし。レストラン・バーでのアレルギー対応・ヴィーガンデザート提供に注力。',
+      instagram_url: 'https://www.instagram.com/hotel_the_celestine_tokyo',
+      tags: ['全国', '東京', 'ホテル', '高級']
+    }
+  ],
+
+  // 🍔 ヴィーガンバーガー・ダイナー
+  burger: [
+    {
+      instagram_id: '@superiorityburgerjapan',
+      display_name: 'Superiority Burger Japan（下北沢）',
+      business_type: 'バーガー',
+      profile_text: 'ニューヨークで大行列のベジタリアン・ヴィーガンバーガー店の下北沢店。バーガーとアイス・ジェラートの相乗効果で大人気。',
+      instagram_url: 'https://www.instagram.com/superiorityburgerjapan',
+      tags: ['全国', '東京', 'ヴィーガンバーガー', 'NY発']
+    },
+    {
+      instagram_id: '@terra_burgers',
+      display_name: 'TERRA BURGERS（代官山）',
+      business_type: 'バーガー',
+      profile_text: '100%植物性素材のプレミアムヴィーガンバーガー。スイーツ・シェイク需要が高く、ヘルシー志向な若年層・外国人が集う。',
+      instagram_url: 'https://www.instagram.com/terra_burgers',
+      tags: ['全国', '東京', 'ヴィーガンバーガー']
+    },
+    {
+      instagram_id: '@greatlakes_tokyo',
+      display_name: 'GREAT LAKES（高田馬場）',
+      business_type: 'バーガー',
+      profile_text: '完全植物性のクラフトバーガー＆アメリカンダイナー。スイーツ・デザートの追加注文ニーズにマッチ。',
+      instagram_url: 'https://www.instagram.com/greatlakes_tokyo',
+      tags: ['全国', '東京', 'ヴィーガンバーガー']
+    }
+  ],
+
+  // ☕ 自然派・オーガニック・ヴィーガンカフェ
+  cafe: [
     {
       instagram_id: '@rotacafe_fukuoka',
       display_name: 'Rota Cafe（ロタカフェ）大名店',
       business_type: 'カフェ',
       profile_text: '福岡大名のマクロビオティック＆ヴィーガンカフェ。無農薬野菜・グルテンフリースイーツ・豆乳デザートを提供。',
       instagram_url: 'https://www.instagram.com/rotacafe_fukuoka',
+      tags: ['福岡', 'ヴィーガンカフェ', 'グルテンフリー']
     },
     {
       instagram_id: '@evahdaining',
@@ -136,57 +348,15 @@ const FALLBACK_SEED_LEADS: Record<string, Partial<Lead>[]> = {
       business_type: 'レストラン',
       profile_text: 'マクロビオティックとヴィーガン対応のオーガニックカフェレストラン。身体に優しいプラントベーススイーツを提供中。',
       instagram_url: 'https://www.instagram.com/evahdaining',
+      tags: ['福岡', 'オーガニック', 'マクロビ']
     },
-    {
-      instagram_id: '@manucoffee.official',
-      display_name: 'manucoffee（マヌコーヒー）',
-      business_type: 'カフェ',
-      profile_text: '福岡発のスペシャルティコーヒーロースター。春吉・大名・薬院・柳橋の4店舗展開。こだわりスイーツと自家焙煎珈琲。',
-      instagram_url: 'https://www.instagram.com/manucoffee.official',
-    },
-    {
-      instagram_id: '@nocoffee_',
-      display_name: 'NO COFFEE 福岡平尾',
-      business_type: 'カフェ',
-      profile_text: 'Life with good coffeeをコンセプトにする福岡・平尾のコーヒーショップ。オリジナルスイーツとグッズ展開。',
-      instagram_url: 'https://www.instagram.com/nocoffee_',
-    },
-    {
-      instagram_id: '@kissa_hachineko',
-      display_name: '喫茶 八猫（はちねこ）',
-      business_type: 'カフェ',
-      profile_text: '福岡市内の自然派喫茶。植物性素材にこだわったヴィーガンスイーツや薬膳チャイをご用意しています。',
-      instagram_url: 'https://www.instagram.com/kissa_hachineko',
-    },
-    {
-      instagram_id: '@sonnengarten_fuk',
-      display_name: 'ゾンネンガルテン 福岡',
-      business_type: 'ベーカリー',
-      profile_text: 'ドイツパンと無添加・オーガニック素材のベーカリーカフェ。アレルギー対応スイーツと植物性ジェラートに注目。',
-      instagram_url: 'https://www.instagram.com/sonnengarten_fuk',
-    },
-    {
-      instagram_id: '@alster_garden',
-      display_name: 'ALSTER GARDEN（アルスターガーデン）',
-      business_type: 'カフェ',
-      profile_text: '緑に囲まれた自然派カフェ。プラントベース対応メニューや身体にやさしいスイーツをランチ・カフェタイムに。',
-      instagram_url: 'https://www.instagram.com/alster_garden',
-    },
-    {
-      instagram_id: '@whiteglasscoffee_fuk',
-      display_name: 'WHITE GLASS COFFEE 福岡',
-      business_type: 'カフェ',
-      profile_text: 'キャナルシティ近くのロースタリーカフェ。緑あふれるテラス席でこだわりスイーツとハンドドリップ珈琲。',
-      instagram_url: 'https://www.instagram.com/whiteglasscoffee_fuk',
-    }
-  ],
-  'default': [
     {
       instagram_id: '@ain_soph_soar',
       display_name: 'AIN SOPH.（アインソフ）',
-      business_type: 'レストラン',
+      business_type: 'カフェ',
       profile_text: '完全植物性のヴィーガンレストラン＆パティスリー。グルテンフリーのパンケーキや豆乳アイス、季節のヴィーガンスイーツ。',
       instagram_url: 'https://www.instagram.com/ain_soph_soar',
+      tags: ['全国', '東京', '京都', 'ヴィーガンカフェ']
     },
     {
       instagram_id: '@wired_bonbon',
@@ -194,56 +364,116 @@ const FALLBACK_SEED_LEADS: Record<string, Partial<Lead>[]> = {
       business_type: 'カフェ',
       profile_text: '100%植物性素材のヴィーガンスイーツ専門店。豆乳や米粉を使ったギルトフリーパフェやヴィーガンソフト。',
       instagram_url: 'https://www.instagram.com/wired_bonbon',
+      tags: ['全国', '東京', 'ヴィーガンスイーツ']
     },
     {
-      instagram_id: '@bio_c_bon_cafe',
-      display_name: 'ビオセボン カフェスペース',
-      business_type: 'デリ',
-      profile_text: 'パリ発のオーガニックスーパー。併設カフェでオーガニックコーヒーや植物性アイス・ヴィーガンスナックを展開。',
-      instagram_url: 'https://www.instagram.com/bio_c_bon_cafe',
+      instagram_id: '@kissa_hachineko',
+      display_name: '喫茶 八猫（はちねこ）福岡',
+      business_type: 'カフェ',
+      profile_text: '福岡市内の自然派喫茶。植物性素材にこだわったヴィーガンスイーツや薬膳チャイをご用意しています。',
+      instagram_url: 'https://www.instagram.com/kissa_hachineko',
+      tags: ['福岡', '自然派喫茶']
     }
   ]
 };
 
 /**
- * 地域とキーワードから、実在するカフェの公式Instagramアカウントを自動検索・抽出する
+ * スマートカテゴリから該当するシード群を抽出
+ */
+function getSeedsForQuery(category?: string, keywords: string[] = [], location: string = ''): Partial<Lead>[] {
+  const seeds: Partial<Lead>[] = [];
+  const lowerKw = keywords.join(' ').toLowerCase();
+
+  if (category === 'ramen' || lowerKw.includes('ラーメン') || lowerKw.includes('ramen')) {
+    seeds.push(...HIGH_IMPACT_SEEDS.ramen);
+  }
+  if (category === 'curry' || lowerKw.includes('カレー') || lowerKw.includes('curry')) {
+    seeds.push(...HIGH_IMPACT_SEEDS.curry);
+  }
+  if (category === 'hotel' || lowerKw.includes('ホテル') || lowerKw.includes('hotel')) {
+    seeds.push(...HIGH_IMPACT_SEEDS.hotel);
+  }
+  if (category === 'burger' || lowerKw.includes('バーガー') || lowerKw.includes('burger')) {
+    seeds.push(...HIGH_IMPACT_SEEDS.burger);
+  }
+  if (category === 'cafe' || lowerKw.includes('カフェ') || seeds.length === 0) {
+    seeds.push(...HIGH_IMPACT_SEEDS.cafe);
+  }
+
+  // 地域が指定されている場合、タグに地域を含むものを優先、全国指定ならすべて対象
+  if (location && location !== '全国' && location !== '全国主要都市') {
+    return seeds.sort((a, b) => {
+      const aMatches = (a.tags || []).some(t => location.includes(t) || t.includes(location));
+      const bMatches = (b.tags || []).some(t => location.includes(t) || t.includes(location));
+      if (aMatches && !bMatches) return -1;
+      if (!aMatches && bMatches) return 1;
+      return 0;
+    });
+  }
+
+  return seeds;
+}
+
+/**
+ * 極限まで簡単に：地域・カテゴリ・キーワードから、即戦力の店舗Instagramアカウントを自動検索・抽出
  */
 export async function findInstagramLeads(options: DiscoveryOptions): Promise<DiscoveredLead[]> {
-  const { location, keywords, limit = 15 } = options;
-  const keywordStr = keywords.length > 0 ? keywords.join(' ') : 'カフェ ヴィーガン オーガニック';
-  const query = `site:instagram.com "${location}" ${keywordStr}`;
+  const { location = '全国', keywords = [], limit = 15, category } = options;
+  
+  // 1. 検索クエリの最適化（DuckDuckGo用）
+  let query = '';
+  const isNational = location === '全国' || location === '全国主要都市' || !location;
+
+  if (category === 'ramen' || keywords.some(k => k.includes('ラーメン'))) {
+    query = isNational
+      ? 'site:instagram.com ("ヴィーガンラーメン" OR "vegan ramen" OR "ベジラーメン")'
+      : `site:instagram.com "${location}" ("ヴィーガンラーメン" OR "vegan ramen")`;
+  } else if (category === 'curry' || keywords.some(k => k.includes('カレー'))) {
+    query = isNational
+      ? 'site:instagram.com ("ヴィーガンカレー" OR "スパイスカレー" OR "vegan curry")'
+      : `site:instagram.com "${location}" ("ヴィーガンカレー" OR "スパイスカレー")`;
+  } else if (category === 'hotel' || keywords.some(k => k.includes('ホテル'))) {
+    query = isNational
+      ? 'site:instagram.com ("ヴィーガン" OR "プラントベース") ("ホテル" OR "ホテルラウンジ")'
+      : `site:instagram.com "${location}" ("ヴィーガン" OR "プラントベース") ホテル`;
+  } else if (category === 'burger' || keywords.some(k => k.includes('バーガー'))) {
+    query = isNational
+      ? 'site:instagram.com ("ヴィーガンバーガー" OR "プラントベースバーガー")'
+      : `site:instagram.com "${location}" ("ヴィーガンバーガー" OR "プラントベースバーガー")`;
+  } else {
+    const keywordStr = keywords.length > 0 ? keywords.join(' ') : 'ヴィーガン カフェ';
+    query = isNational
+      ? `site:instagram.com ("東京" OR "大阪" OR "京都" OR "福岡") ${keywordStr}`
+      : `site:instagram.com "${location}" ${keywordStr}`;
+  }
 
   let results: Partial<Lead>[] = [];
 
+  // 2. DuckDuckGoでWeb検索を実行
   try {
     const html = await fetchDuckDuckGoHtml(query);
-    const extracted = extractAccountsFromHtml(html, location);
-    results = extracted;
+    results = extractAccountsFromHtml(html, isNational ? '全国' : location);
   } catch (error) {
-    console.warn('Web search failed, falling back to seed database:', error);
+    console.warn('Web search failed or rate-limited, relying on high impact seed database:', error);
   }
 
-  // 取得件数が少ない場合、シードDBから地域一致またはデフォルトを補完
-  if (results.length < 5) {
-    const matchedKey = Object.keys(FALLBACK_SEED_LEADS).find(k => location.includes(k)) || 'default';
-    const seed = FALLBACK_SEED_LEADS[matchedKey] || FALLBACK_SEED_LEADS['default'];
-    
-    // 重複を避けてマージ
-    const existingIds = new Set(results.map(r => r.instagram_id?.toLowerCase()));
-    for (const item of seed) {
-      if (!existingIds.has(item.instagram_id?.toLowerCase())) {
-        results.push({
-          ...item,
-          status: 'new',
-          tags: [location, 'シード候補'],
-          created_at: new Date().toISOString(),
-        });
-        existingIds.add(item.instagram_id?.toLowerCase());
-      }
+  // 3. 高確度シードマスターから補完・統合（即戦力データを常に確実供給）
+  const relevantSeeds = getSeedsForQuery(category, keywords, location);
+  const seenIds = new Set(results.map(r => r.instagram_id?.toLowerCase()));
+
+  for (const seed of relevantSeeds) {
+    if (!seenIds.has(seed.instagram_id?.toLowerCase())) {
+      results.push({
+        ...seed,
+        status: 'new',
+        tags: [isNational ? '全国展開' : location, seed.business_type || 'ターゲット', '即戦力シード'],
+        created_at: new Date().toISOString(),
+      });
+      seenIds.add(seed.instagram_id?.toLowerCase());
     }
   }
 
-  // 自動スコアリングを実行し、高スコア順に並び替え
+  // 4. 自動スコアリング（ラーメン、カレー、ホテル、ヴィーガンキーワード等を高加点）
   const scoredLeads: DiscoveredLead[] = results.map(lead => {
     const scoreResult = scoreLead(lead as Lead);
     return {

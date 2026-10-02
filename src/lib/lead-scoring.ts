@@ -16,8 +16,8 @@ export function scoreLead(lead: Lead): LeadScore {
 
   // Followers
   if (lead.followers_count && lead.followers_count >= 10000) {
-    total += 40;
-    breakdown.push({ reason: 'フォロワー1万人以上', score: 40 });
+    total += 30;
+    breakdown.push({ reason: 'フォロワー1万人以上', score: 30 });
   } else if (lead.followers_count && lead.followers_count >= 3000) {
     total += 20;
     breakdown.push({ reason: 'フォロワー3000人以上', score: 20 });
@@ -28,19 +28,27 @@ export function scoreLead(lead: Lead): LeadScore {
 
   // Profile keywords
   const profile = (lead.profile_text || '').toLowerCase();
-  if (profile.includes('ヴィーガン') || profile.includes('vegan') || profile.includes('プラントベース')) {
-    total += 30;
-    breakdown.push({ reason: 'ヴィーガン関連キーワード', score: 30 });
+  if (profile.includes('ヴィーガン') || profile.includes('vegan') || profile.includes('プラントベース') || profile.includes('plant-based')) {
+    total += 35;
+    breakdown.push({ reason: 'ヴィーガン・プラントベース合致', score: 35 });
   }
-  if (profile.includes('オーガニック') || profile.includes('organic') || profile.includes('無添加') || profile.includes('天然')) {
-    total += 20;
-    breakdown.push({ reason: 'オーガニック関連キーワード', score: 20 });
+  if (profile.includes('オーガニック') || profile.includes('organic') || profile.includes('無添加') || profile.includes('グルテンフリー')) {
+    total += 15;
+    breakdown.push({ reason: 'オーガニック・グルテンフリー', score: 15 });
+  }
+  if (profile.includes('インバウンド') || profile.includes('訪日') || profile.includes('海外') || profile.includes('外国人')) {
+    total += 10;
+    breakdown.push({ reason: 'インバウンド・外国人顧客層', score: 10 });
   }
 
-  // Business type
-  if (lead.business_type === 'カフェ' || lead.business_type === 'レストラン' || lead.business_type === 'ホテル') {
-    total += 10;
-    breakdown.push({ reason: `ターゲット業種（${lead.business_type}）`, score: 10 });
+  // Business type: デザート自作が難しく外注・仕入れ親和性が高い業種を最優先
+  const highFitTypes = ['ラーメン', 'カレー', 'バーガー', 'ホテル'];
+  if (lead.business_type && highFitTypes.includes(lead.business_type)) {
+    total += 25;
+    breakdown.push({ reason: `最優先業種（${lead.business_type}：デザート仕入れ親和性抜群）`, score: 25 });
+  } else if (lead.business_type === 'カフェ' || lead.business_type === 'レストラン' || lead.business_type === 'ベーカリー') {
+    total += 15;
+    breakdown.push({ reason: `ターゲット業種（${lead.business_type}）`, score: 15 });
   }
 
   total = Math.min(total, 100);
