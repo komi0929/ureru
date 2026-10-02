@@ -1121,6 +1121,36 @@ export async function saveMaterial(material: Omit<Material, 'id' | 'total_packag
   return newOrUpdated;
 }
 
+export async function toggleMaterialProvisional(id: string, isProvisional: boolean, provisionalNotes?: string): Promise<Material | null> {
+  const current = await getMaterials();
+  const index = current.findIndex(m => m.id === id);
+  if (index === -1) return null;
+
+  const updated: Material = {
+    ...current[index],
+    is_provisional: isProvisional,
+    provisional_notes: provisionalNotes !== undefined ? provisionalNotes : current[index].provisional_notes,
+    updated_at: new Date().toISOString(),
+  };
+
+  current[index] = updated;
+  inMemoryMaterials = [...current];
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY_MATERIALS, JSON.stringify(inMemoryMaterials));
+  }
+
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase.from('cost_materials').upsert([updated]);
+    } catch (e) {
+      console.warn('Supabase material toggle provisional error:', e);
+    }
+  }
+
+  return updated;
+}
+
 export async function deleteMaterial(id: string): Promise<boolean> {
   const current = await getMaterials();
   const updatedList = current.filter(m => m.id !== id);

@@ -22,6 +22,8 @@ export interface Material {
   total_package_cost: number; // 送料込み税込総額 = package_price + shipping_cost
   unit_cost: number;          // 1gあたり（または1ml、1個あたり）の送料込み税込単価
   notes?: string;             // 備考・規格情報
+  is_provisional?: boolean;   // 暫定・未確定情報フラグ
+  provisional_notes?: string; // 暫定理由・未確定メモ（例: 見積もり待ち、概算仮単価等）
   created_at?: string;
   updated_at?: string;
 }

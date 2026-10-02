@@ -22,11 +22,20 @@ import {
   ArrowLeft,
   Info,
   Tag,
-  CheckCircle2
+  CheckCircle2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  AlertTriangle,
+  Layers,
+  Percent
 } from 'lucide-react';
 import { Recipe, Material, RecipeCostBreakdown, PackageType, UniformPricingConfig } from '@/types/cost';
 import { getRecipes, getMaterials, calculateRecipeCost, getUniformPricing, saveUniformPricing, DEFAULT_UNIFORM_PRICING } from '@/lib/cost-api';
 import TutorialModal from '@/components/cost/TutorialModal';
+
+type SortKey = 'name' | 'ingredient_cost' | 'packaging_cost' | 'labor_cost' | 'manufacturing_cost' | 'gross_margin' | 'cost_ratio' | 'margin_ratio';
+type SortOrder = 'asc' | 'desc';
 
 export default function CostSummaryPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -36,6 +45,10 @@ export default function CostSummaryPage() {
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [uniformPricing, setUniformPricing] = useState<UniformPricingConfig>(DEFAULT_UNIFORM_PRICING);
   const [priceSavedNotice, setPriceSavedNotice] = useState(false);
+
+  // 並び替え (ソート) 状態
+  const [sortKey, setSortKey] = useState<SortKey>('margin_ratio');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
   useEffect(() => {
     async function load() {
@@ -63,6 +76,12 @@ export default function CostSummaryPage() {
     setTimeout(() => setPriceSavedNotice(false), 2000);
   };
 
+  // 暫定材料のマップ（レシピ内に暫定材料が含まれるか判定）
+  const provisionalMaterialIds = useMemo(() => {
+    return new Set(materials.filter(m => m.is_provisional).map(m => m.id));
+  }, [materials]);
+
+  // 全レシピの原価詳細計算 ＋ 原価率内訳計算
   const breakdowns = useMemo(() => {
     const currentWholesale = isBulk
       ? uniformPricing.bulk_wholesale_price
@@ -71,12 +90,114 @@ export default function CostSummaryPage() {
       ? uniformPricing.bulk_retail_price
       : uniformPricing.cup_retail_price;
 
-    return recipes.map(r => calculateRecipeCost(r, materials, activePackageType, currentWholesale, currentRetail));
-  }, [recipes, materials, activePackageType, uniformPricing, isBulk]);
+    return recipes.map(r => {
+      const b = calculateRecipeCost(r, materials, activePackageType, currentWholesale, currentRetail);
+      
+      // 想定卸売価格に対する各要素の原価率（％）
+      const price = b.wholesale.price > 0 ? b.wholesale.price : 1;
+      const ingredientPercentOfPrice = (b.unit_ingredient_cost / price) * 100;
+      const packagingPercentOfPrice = (b.unit_packaging_cost / price) * 100;
+      const laborPercentOfPrice = (b.unit_labor_cost / price) * 100;
+
+      // 暫定材料を含むか
+      const hasProvisionalMaterial = r.ingredients.some(ing => provisionalMaterialIds.has(ing.material_id)) ||
+        (b.package_type === 'bulk' ? r.bulk_config.packagings : r.cup_config.packagings).some(p => provisionalMaterialIds.has(p.material_id));
+
+      return {
+        ...b,
+        ingredientPercentOfPrice,
+        packagingPercentOfPrice,
+        laborPercentOfPrice,
+        hasProvisionalMaterial,
+      };
+    });
+  }, [recipes, materials, activePackageType, uniformPricing, isBulk, provisionalMaterialIds]);
+
+  // ソートされたリスト
+  const sortedBreakdowns = useMemo(() => {
+    return [...breakdowns].sort((a, b) => {
+      let valA: number | string = 0;
+      let valB: number | string = 0;
+
+      switch (sortKey) {
+        case 'name':
+          valA = a.recipe.name;
+          valB = b.recipe.name;
+          return sortOrder === 'asc' 
+            ? String(valA).localeCompare(String(valB), 'ja')
+            : String(valB).localeCompare(String(valA), 'ja');
+        case 'ingredient_cost':
+          valA = a.unit_ingredient_cost;
+          valB = b.unit_ingredient_cost;
+          break;
+        case 'packaging_cost':
+          valA = a.unit_packaging_cost;
+          valB = b.unit_packaging_cost;
+          break;
+        case 'labor_cost':
+          valA = a.unit_labor_cost;
+          valB = b.unit_labor_cost;
+          break;
+        case 'manufacturing_cost':
+          valA = a.unit_manufacturing_cost;
+          valB = b.unit_manufacturing_cost;
+          break;
+        case 'gross_margin':
+          valA = a.wholesale.gross_margin;
+          valB = b.wholesale.gross_margin;
+          break;
+        case 'cost_ratio':
+          valA = a.wholesale.cost_ratio;
+          valB = b.wholesale.cost_ratio;
+          break;
+        case 'margin_ratio':
+        default:
+          valA = a.wholesale.margin_ratio;
+          valB = b.wholesale.margin_ratio;
+          break;
+      }
+
+      return sortOrder === 'asc' ? (valA as number) - (valB as number) : (valB as number) - (valA as number);
+    });
+  }, [breakdowns, sortKey, sortOrder]);
+
+  // ヘッダークリック時のソート切替
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      // デフォルト順序: 原価系は昇順が好まれる場合もあるが、粗利系は降順、原価率は目的に応じる
+      setSortOrder(key === 'cost_ratio' || key === 'manufacturing_cost' ? 'asc' : 'desc');
+    }
+  };
+
+  // 全体平均値の計算
+  const avgManufacturingCost = Math.round(
+    breakdowns.reduce((sum, b) => sum + b.unit_manufacturing_cost, 0) / (breakdowns.length || 1)
+  );
+  const avgIngredientCost = 
+    breakdowns.reduce((sum, b) => sum + b.unit_ingredient_cost, 0) / (breakdowns.length || 1);
+  const avgPackagingCost = 
+    breakdowns.reduce((sum, b) => sum + b.unit_packaging_cost, 0) / (breakdowns.length || 1);
+  const avgLaborCost = 
+    breakdowns.reduce((sum, b) => sum + b.unit_labor_cost, 0) / (breakdowns.length || 1);
+  
+  const currentWholesale = isBulk ? uniformPricing.bulk_wholesale_price : uniformPricing.cup_wholesale_price;
+  const avgCostRatio = (avgManufacturingCost / (currentWholesale || 1)) * 100;
+  const avgMarginRatio = 
+    breakdowns.reduce((sum, b) => sum + b.wholesale.margin_ratio, 0) / (breakdowns.length || 1);
+  const avgGrossMargin = Math.round(
+    breakdowns.reduce((sum, b) => sum + b.wholesale.gross_margin, 0) / (breakdowns.length || 1)
+  );
+
+  const avgIngredientPercentOfPrice = (avgIngredientCost / (currentWholesale || 1)) * 100;
+  const avgPackagingPercentOfPrice = (avgPackagingCost / (currentWholesale || 1)) * 100;
+  const avgLaborPercentOfPrice = (avgLaborCost / (currentWholesale || 1)) * 100;
 
   // Chart 1: Cost Breakdown Stacked Bar Chart data
   const stackedChartData = useMemo(() => {
-    return breakdowns.map(b => ({
+    return sortedBreakdowns.map(b => ({
       name: b.recipe.name.replace('米粉アイス【', '').replace('】', ''),
       '材料費': Number(b.unit_ingredient_cost.toFixed(1)),
       '資材代': Number(b.unit_packaging_cost.toFixed(1)),
@@ -84,18 +205,18 @@ export default function CostSummaryPage() {
       '製造原価': Math.round(b.unit_manufacturing_cost),
       '想定卸価格': b.wholesale.price,
     }));
-  }, [breakdowns]);
+  }, [sortedBreakdowns]);
 
   // Chart 2: Margin Comparison data
   const marginChartData = useMemo(() => {
-    return breakdowns.map(b => ({
+    return sortedBreakdowns.map(b => ({
       name: b.recipe.name.replace('米粉アイス【', '').replace('】', ''),
       '製造原価': Math.round(b.unit_manufacturing_cost),
       '卸粗利益': Math.round(b.wholesale.gross_margin),
       '卸価格': b.wholesale.price,
       '粗利率': Number(b.wholesale.margin_ratio.toFixed(1)),
     }));
-  }, [breakdowns]);
+  }, [sortedBreakdowns]);
 
   if (loading) {
     return (
@@ -119,7 +240,7 @@ export default function CostSummaryPage() {
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">原価・粗利サマリー分析</h1>
           <p className="text-xs text-slate-500 mt-1">
-            製造形態（個食カップ / 業務用2Lバルク）を切り替えて、材料費・資材費・人件費の構成バランスと卸売粗利マージンを比較分析します。
+            人件費・材料・資材の金額と構成比率（％）を精密に可視化。原価率や粗利の並び替えで課題フレーバーを瞬時に特定できます。
           </p>
         </div>
 
@@ -193,7 +314,7 @@ export default function CostSummaryPage() {
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                直接数値を入力すると、下の全グラフおよび平均粗利率・原価サマリーが即座に再試算されます。
+                直接数値を入力すると、下の全原価率内訳および平均粗利率・原価サマリーが即座に再試算されます。
               </p>
             </div>
           </div>
@@ -323,47 +444,107 @@ export default function CostSummaryPage() {
         </div>
       </div>
 
-      {/* Overview Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Overview Stat Cards (★原価率の内訳をパッと見で把握できるカード追加) */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Card 1: 平均製造原価 */}
         <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs">
           <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">
             平均製造原価 ({unitLabel})
           </div>
           <div className="text-2xl font-bold text-slate-900 font-mono">
-            ¥{Math.round(
-              breakdowns.reduce((sum, b) => sum + b.unit_manufacturing_cost, 0) / (breakdowns.length || 1)
-            ).toLocaleString()}
+            ¥{avgManufacturingCost.toLocaleString()}
           </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            材料・資材・人件費の全種平均
+          <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+            <span>平均卸原価率:</span>
+            <span className="font-bold text-slate-800 font-mono">{avgCostRatio.toFixed(1)}%</span>
           </div>
         </div>
 
+        {/* Card 2: ★原価率の内訳（材料・資材・人件費） */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs md:col-span-2">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-amber-600" />
+              平均原価率の内訳（対卸価格比）
+            </span>
+            <span className="text-[11px] font-mono font-bold text-slate-900">
+              合計 {avgCostRatio.toFixed(1)}%
+            </span>
+          </div>
+
+          {/* ミニ スタックプログレスバー */}
+          <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+            <div 
+              style={{ width: `${Math.min(100, avgIngredientPercentOfPrice)}%` }} 
+              className="bg-amber-400 hover:opacity-90 transition-all" 
+              title={`材料費: ¥${avgIngredientCost.toFixed(1)} (${avgIngredientPercentOfPrice.toFixed(1)}%)`}
+            />
+            <div 
+              style={{ width: `${Math.min(100, avgPackagingPercentOfPrice)}%` }} 
+              className="bg-slate-400 hover:opacity-90 transition-all" 
+              title={`資材代: ¥${avgPackagingCost.toFixed(1)} (${avgPackagingPercentOfPrice.toFixed(1)}%)`}
+            />
+            <div 
+              style={{ width: `${Math.min(100, avgLaborPercentOfPrice)}%` }} 
+              className="bg-blue-400 hover:opacity-90 transition-all" 
+              title={`人件費: ¥${avgLaborCost.toFixed(1)} (${avgLaborPercentOfPrice.toFixed(1)}%)`}
+            />
+          </div>
+
+          {/* 3要素の内訳数値 (いくらで何％か) */}
+          <div className="grid grid-cols-3 gap-2 mt-2.5 pt-2 border-t border-slate-100 text-center">
+            <div className="bg-amber-50/60 p-1.5 rounded-lg border border-amber-200/60">
+              <div className="text-[10px] text-amber-800 font-semibold flex items-center justify-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
+                材料費
+              </div>
+              <div className="text-xs font-bold text-slate-900 font-mono mt-0.5">
+                ¥{avgIngredientCost.toFixed(1)}
+              </div>
+              <div className="text-[10px] text-amber-700 font-mono font-bold">
+                {avgIngredientPercentOfPrice.toFixed(1)}%
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <div className="text-[10px] text-slate-700 font-semibold flex items-center justify-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-slate-400 inline-block"></span>
+                資材代
+              </div>
+              <div className="text-xs font-bold text-slate-900 font-mono mt-0.5">
+                ¥{avgPackagingCost.toFixed(1)}
+              </div>
+              <div className="text-[10px] text-slate-600 font-mono font-bold">
+                {avgPackagingPercentOfPrice.toFixed(1)}%
+              </div>
+            </div>
+
+            <div className="bg-blue-50/60 p-1.5 rounded-lg border border-blue-200/60">
+              <div className="text-[10px] text-blue-800 font-semibold flex items-center justify-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>
+                人件費
+              </div>
+              <div className="text-xs font-bold text-slate-900 font-mono mt-0.5">
+                ¥{avgLaborCost.toFixed(1)}
+              </div>
+              <div className="text-[10px] text-blue-700 font-mono font-bold">
+                {avgLaborPercentOfPrice.toFixed(1)}%
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: 平均粗利 */}
         <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs">
           <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">
-            平均 卸売粗利率 ({isBulk ? 'バルク卸' : 'カップ卸'})
+            平均 卸粗利益 ({unitLabel})
           </div>
           <div className="text-2xl font-bold text-emerald-600 font-mono">
-            {(
-              breakdowns.reduce((sum, b) => sum + b.wholesale.margin_ratio, 0) / (breakdowns.length || 1)
-            ).toFixed(1)}%
+            ¥{avgGrossMargin.toLocaleString()}
           </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            全レシピ平均マージン率
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs">
-          <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">
-            平均 粗利額 (卸売 / {unitLabel})
-          </div>
-          <div className="text-2xl font-bold text-slate-900 font-mono">
-            ¥{Math.round(
-              breakdowns.reduce((sum, b) => sum + b.wholesale.gross_margin, 0) / (breakdowns.length || 1)
-            ).toLocaleString()}
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            {isBulk ? '飲食店・カフェへの2L納品ごとの手残り額' : '小売店・カフェへの1個納品ごとの手残り額'}
+          <div className="text-[11px] text-emerald-700 font-bold mt-1 flex items-center justify-between">
+            <span>平均粗利率:</span>
+            <span className="font-mono">{avgMarginRatio.toFixed(1)}%</span>
           </div>
         </div>
       </div>
@@ -430,72 +611,355 @@ export default function CostSummaryPage() {
 
       </div>
 
-      {/* Comparison Detail Table */}
-      <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
-        <div className="p-4 border-b border-slate-100 font-bold text-xs text-slate-800 flex items-center justify-between">
-          <span>全10種 原価・マージン詳細一覧 ({unitLabel})</span>
-          <span className="text-[11px] font-normal text-slate-500">
-            {isBulk ? '仕込み1回 = 2L × 3本 (計6L)' : '仕込み1回 = 100g × 65個 (計6.5kg)'}
-          </span>
+      {/* Comparison Detail Table with Enhanced Breakdown & Sorting */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+        
+        {/* Table Top Controls: Title & Quick Sort Buttons */}
+        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm text-slate-900">
+                全10種 原価内訳・マージン詳細一覧 ({unitLabel})
+              </span>
+              <span className="text-[11px] font-normal text-slate-500">
+                {isBulk ? '仕込み1回 = 2L × 3本 (計6L)' : '仕込み1回 = 100g × 65個 (計6.5kg)'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              各項目をクリックまたはクイックボタンで簡単に並び替え可能。原価率の内訳（材料・資材・人件費）も一目で分かります。
+            </p>
+          </div>
+
+          {/* クイックソートボタン群 */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] font-semibold text-slate-500 mr-1">並び替え:</span>
+            
+            <button
+              onClick={() => { setSortKey('margin_ratio'); setSortOrder('desc'); }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
+                sortKey === 'margin_ratio' && sortOrder === 'desc'
+                  ? 'bg-emerald-600 text-white border-emerald-600 font-bold shadow-2xs'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              💎 粗利率が高い順
+            </button>
+
+            <button
+              onClick={() => { setSortKey('cost_ratio'); setSortOrder('asc'); }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
+                sortKey === 'cost_ratio' && sortOrder === 'asc'
+                  ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-2xs'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              📉 原価率が低い順
+            </button>
+
+            <button
+              onClick={() => { setSortKey('cost_ratio'); setSortOrder('desc'); }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
+                sortKey === 'cost_ratio' && sortOrder === 'desc'
+                  ? 'bg-rose-600 text-white border-rose-600 font-bold shadow-2xs'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              ⚠️ 原価率が高い順
+            </button>
+
+            <button
+              onClick={() => { setSortKey('gross_margin'); setSortOrder('desc'); }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
+                sortKey === 'gross_margin' && sortOrder === 'desc'
+                  ? 'bg-slate-900 text-white border-slate-900 font-bold shadow-2xs'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              💰 粗利額順
+            </button>
+
+            <button
+              onClick={() => { setSortKey('ingredient_cost'); setSortOrder('asc'); }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
+                sortKey === 'ingredient_cost' && sortOrder === 'asc'
+                  ? 'bg-amber-600 text-white border-amber-600 font-bold shadow-2xs'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              🥣 材料費が安い順
+            </button>
+          </div>
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-medium">
-                <th className="py-2.5 px-4">レシピ名</th>
-                <th className="py-2.5 px-4 text-right">仕上がり定数</th>
-                <th className="py-2.5 px-4 text-right">材料費 (1{shortUnit})</th>
-                <th className="py-2.5 px-4 text-right">資材代 (1{shortUnit})</th>
-                <th className="py-2.5 px-4 text-right">人件費 (1{shortUnit})</th>
-                <th className="py-2.5 px-4 text-right font-semibold text-slate-900">{unitLabel}あたり製造原価</th>
-                <th className="py-2.5 px-4 text-right">想定卸売価格</th>
-                <th className="py-2.5 px-4 text-right text-emerald-700 font-semibold">卸粗利益</th>
-                <th className="py-2.5 px-4 text-right">卸原価率</th>
-                <th className="py-2.5 px-4 text-center">操作</th>
+              <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-medium select-none">
+                {/* レシピ名 */}
+                <th 
+                  onClick={() => handleSort('name')} 
+                  className="py-3 px-4 cursor-pointer hover:bg-slate-100/80 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>レシピ名</span>
+                    {sortKey === 'name' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-slate-900" /> : <ArrowDown className="w-3.5 h-3.5 text-slate-900" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
+
+                {/* 仕上がり定数 */}
+                <th className="py-3 px-3 text-right">仕上がり定数</th>
+
+                {/* 材料費 (金額 ＆ ％) */}
+                <th 
+                  onClick={() => handleSort('ingredient_cost')} 
+                  className={`py-3 px-3 text-right cursor-pointer hover:bg-slate-100/80 transition-colors ${
+                    sortKey === 'ingredient_cost' ? 'bg-amber-50/60 font-bold text-amber-900' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    <span>材料費 (内訳%)</span>
+                    {sortKey === 'ingredient_cost' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-amber-700" /> : <ArrowDown className="w-3.5 h-3.5 text-amber-700" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
+
+                {/* 資材代 (金額 ＆ ％) */}
+                <th 
+                  onClick={() => handleSort('packaging_cost')} 
+                  className={`py-3 px-3 text-right cursor-pointer hover:bg-slate-100/80 transition-colors ${
+                    sortKey === 'packaging_cost' ? 'bg-slate-100 font-bold text-slate-900' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    <span>資材代 (内訳%)</span>
+                    {sortKey === 'packaging_cost' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-slate-800" /> : <ArrowDown className="w-3.5 h-3.5 text-slate-800" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
+
+                {/* 人件費 (金額 ＆ ％) */}
+                <th 
+                  onClick={() => handleSort('labor_cost')} 
+                  className={`py-3 px-3 text-right cursor-pointer hover:bg-slate-100/80 transition-colors ${
+                    sortKey === 'labor_cost' ? 'bg-blue-50/60 font-bold text-blue-900' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    <span>人件費 (内訳%)</span>
+                    {sortKey === 'labor_cost' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-700" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-700" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
+
+                {/* 製造原価合計 */}
+                <th 
+                  onClick={() => handleSort('manufacturing_cost')} 
+                  className={`py-3 px-4 text-right cursor-pointer hover:bg-slate-100/80 transition-colors ${
+                    sortKey === 'manufacturing_cost' ? 'bg-slate-100 font-bold text-slate-900' : 'font-semibold text-slate-900'
+                  }`}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    <span>製造原価 ({unitLabel})</span>
+                    {sortKey === 'manufacturing_cost' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-slate-900" /> : <ArrowDown className="w-3.5 h-3.5 text-slate-900" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
+
+                {/* 想定卸売価格 */}
+                <th className="py-3 px-3 text-right">想定卸価格</th>
+
+                {/* 卸粗利益 */}
+                <th 
+                  onClick={() => handleSort('gross_margin')} 
+                  className={`py-3 px-3 text-right cursor-pointer hover:bg-slate-100/80 transition-colors ${
+                    sortKey === 'gross_margin' ? 'bg-emerald-50 font-bold text-emerald-900' : 'text-emerald-700 font-semibold'
+                  }`}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    <span>卸粗利益 (粗利率)</span>
+                    {sortKey === 'gross_margin' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-emerald-700" /> : <ArrowDown className="w-3.5 h-3.5 text-emerald-700" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
+
+                {/* 卸原価率 ＆ ビジュアル内訳バー */}
+                <th 
+                  onClick={() => handleSort('cost_ratio')} 
+                  className={`py-3 px-4 text-left cursor-pointer hover:bg-slate-100/80 transition-colors min-w-[190px] ${
+                    sortKey === 'cost_ratio' ? 'bg-slate-100 font-bold text-slate-900' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-1">
+                    <span>原価率 ＆ 内訳比率</span>
+                    {sortKey === 'cost_ratio' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-slate-900" /> : <ArrowDown className="w-3.5 h-3.5 text-slate-900" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
+
+                <th className="py-3 px-3 text-center">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {breakdowns.map((b) => (
-                <tr key={b.recipe.id} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="py-3 px-4 font-semibold text-slate-900">
-                    {b.recipe.name}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono text-slate-500">
-                    {b.target_quantity}{shortUnit}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono text-slate-600">
-                    ¥{b.unit_ingredient_cost.toFixed(1)}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono text-slate-600">
-                    ¥{b.unit_packaging_cost.toFixed(1)}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono text-slate-600">
-                    ¥{b.unit_labor_cost.toFixed(1)}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
-                    ¥{Math.round(b.unit_manufacturing_cost).toLocaleString()}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono text-slate-700">
-                    ¥{b.wholesale.price.toLocaleString()}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono font-semibold text-emerald-600">
-                    ¥{Math.round(b.wholesale.gross_margin).toLocaleString()}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono">
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">
-                      {b.wholesale.cost_ratio.toFixed(1)}%
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <Link
-                      href={`/cost/recipes/${b.recipe.id}`}
-                      className="px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
-                    >
-                      編集
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {sortedBreakdowns.map((b) => {
+                const isHighCost = b.wholesale.cost_ratio > 65;
+                const isGreatMargin = b.wholesale.margin_ratio >= 40;
+
+                return (
+                  <tr key={b.recipe.id} className="hover:bg-slate-50/80 transition-colors">
+                    
+                    {/* レシピ名 ＆ 暫定バッジ */}
+                    <td className="py-3.5 px-4 font-semibold text-slate-900">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>{b.recipe.name}</span>
+                        {b.hasProvisionalMaterial && (
+                          <span 
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300"
+                            title="このレシピには未確定・暫定単価の材料が含まれています"
+                          >
+                            <AlertTriangle className="w-3 h-3 text-amber-600" />
+                            暫定材料
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* 定数 */}
+                    <td className="py-3.5 px-3 text-right font-mono text-slate-500 whitespace-nowrap">
+                      {b.target_quantity}{shortUnit}
+                    </td>
+
+                    {/* 材料費: 金額 ＆ 対売価％ */}
+                    <td className="py-3.5 px-3 text-right font-mono whitespace-nowrap">
+                      <div className="text-slate-900 font-medium">
+                        ¥{b.unit_ingredient_cost.toFixed(1)}
+                      </div>
+                      <div className="text-[10px] text-amber-700 font-semibold">
+                        ({b.ingredientPercentOfPrice.toFixed(1)}%)
+                      </div>
+                    </td>
+
+                    {/* 資材代: 金額 ＆ 対売価％ */}
+                    <td className="py-3.5 px-3 text-right font-mono whitespace-nowrap">
+                      <div className="text-slate-900 font-medium">
+                        ¥{b.unit_packaging_cost.toFixed(1)}
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-medium">
+                        ({b.packagingPercentOfPrice.toFixed(1)}%)
+                      </div>
+                    </td>
+
+                    {/* 人件費: 金額 ＆ 対売価％ */}
+                    <td className="py-3.5 px-3 text-right font-mono whitespace-nowrap">
+                      <div className="text-slate-900 font-medium">
+                        ¥{b.unit_labor_cost.toFixed(1)}
+                      </div>
+                      <div className="text-[10px] text-blue-700 font-semibold">
+                        ({b.laborPercentOfPrice.toFixed(1)}%)
+                      </div>
+                    </td>
+
+                    {/* 製造原価合計 */}
+                    <td className="py-3.5 px-4 text-right font-mono whitespace-nowrap">
+                      <div className="text-xs font-bold text-slate-900">
+                        ¥{Math.round(b.unit_manufacturing_cost).toLocaleString()}
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        1{shortUnit}あたり
+                      </div>
+                    </td>
+
+                    {/* 想定卸売価格 */}
+                    <td className="py-3.5 px-3 text-right font-mono text-slate-700 whitespace-nowrap">
+                      ¥{b.wholesale.price.toLocaleString()}
+                    </td>
+
+                    {/* 卸粗利益 ＆ 粗利率 */}
+                    <td className="py-3.5 px-3 text-right font-mono whitespace-nowrap">
+                      <div className="text-xs font-bold text-emerald-600">
+                        ¥{Math.round(b.wholesale.gross_margin).toLocaleString()}
+                      </div>
+                      <div className="text-[10px] font-bold text-emerald-700">
+                        {b.wholesale.margin_ratio.toFixed(1)}% 粗利
+                      </div>
+                    </td>
+
+                    {/* 原価率 ＆ 3色ミニスタックバー (★パッと見てわかる内訳) */}
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center justify-between text-xs mb-1 font-mono">
+                        <span className={`font-bold px-1.5 py-0.2 rounded text-[11px] ${
+                          isHighCost 
+                            ? 'bg-rose-100 text-rose-800' 
+                            : isGreatMargin 
+                              ? 'bg-emerald-100 text-emerald-900' 
+                              : 'bg-slate-100 text-slate-800'
+                        }`}>
+                          {b.wholesale.cost_ratio.toFixed(1)}%
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          原価内訳
+                        </span>
+                      </div>
+
+                      {/* 3要素のミニスタックバー */}
+                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden flex shadow-2xs">
+                        <div 
+                          style={{ width: `${Math.min(100, b.ingredientPercentOfPrice)}%` }} 
+                          className="bg-amber-400" 
+                          title={`材料費: ¥${b.unit_ingredient_cost.toFixed(1)} (${b.ingredientPercentOfPrice.toFixed(1)}%)`}
+                        />
+                        <div 
+                          style={{ width: `${Math.min(100, b.packagingPercentOfPrice)}%` }} 
+                          className="bg-slate-400" 
+                          title={`資材代: ¥${b.unit_packaging_cost.toFixed(1)} (${b.packagingPercentOfPrice.toFixed(1)}%)`}
+                        />
+                        <div 
+                          style={{ width: `${Math.min(100, b.laborPercentOfPrice)}%` }} 
+                          className="bg-blue-400" 
+                          title={`人件費: ¥${b.unit_labor_cost.toFixed(1)} (${b.laborPercentOfPrice.toFixed(1)}%)`}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono mt-1 gap-1">
+                        <span className="text-amber-700">材 {b.ingredientPercentOfPrice.toFixed(0)}%</span>
+                        <span className="text-slate-500">資 {b.packagingPercentOfPrice.toFixed(0)}%</span>
+                        <span className="text-blue-700">人 {b.laborPercentOfPrice.toFixed(0)}%</span>
+                      </div>
+                    </td>
+
+                    {/* 操作 */}
+                    <td className="py-3.5 px-3 text-center whitespace-nowrap">
+                      <Link
+                        href={`/cost/recipes/${b.recipe.id}`}
+                        className="px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors inline-block"
+                      >
+                        詳細・編集
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
