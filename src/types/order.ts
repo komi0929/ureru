@@ -38,12 +38,27 @@ export interface B2BCustomer {
 }
 
 /**
+ * 送料内訳情報（基本運賃 + クール便代 + 資材代・発送代金200円 + 税）
+ */
+export interface ShippingBreakdown {
+  base_rate: number;         // 特約基本運賃 (税抜)
+  cool_fee: number;          // クール便加算額 (税抜: 60=250, 80=300, 100=400, 120=650)
+  handling_fee: number;      // 資材代・発送代金 (税抜: 200円)
+  unit_tax_excluded: number; // 1箱あたり税抜送料小計 (基本 + クール + 資材代)
+  unit_tax: number;          // 1箱あたり消費税 (10%)
+  unit_tax_included: number; // 1箱あたり税込送料
+  box_count: number;         // 箱数
+  total_shipping_fee: number;// 税込合計送料 (unit_tax_included * box_count)
+}
+
+/**
  * 配送指定
  */
 export interface ShippingPreference {
   box_size: ShippingBoxSize; // '60' | '80' | '100' | '120'
   box_count: number;         // 箱数 (通常1箱、容量オーバー時は複数箱)
   shipping_fee: number;      // 冷凍クール便送料 (税込)
+  breakdown?: ShippingBreakdown; // 送料詳細内訳
   estimated_shipping_date: string; // 発送予定日 (最短3営業日後)
   preferred_delivery_date?: string; // 配達希望日
   delivery_time_slot: string; // ヤマト運輸 配達時間帯指定
@@ -70,6 +85,15 @@ export interface B2BOrder {
 }
 
 /**
+ * ヤマト運輸 特約運賃テーブル (契約書原本データ)
+ */
+export interface YamatoContractRate {
+  region: string;            // 地域名 (九州, 関東 等)
+  prefectures: string[];     // 属する都道府県一覧
+  rates: Record<ShippingBoxSize, number>; // 60, 80, 100, 120の税抜特約運賃
+}
+
+/**
  * ヤマト運輸 クール冷凍便 料金テーブル
  */
 export interface YamatoShippingRate {
@@ -77,3 +101,4 @@ export interface YamatoShippingRate {
   prefectures: string[];     // 属する都道府県一覧
   rates: Record<ShippingBoxSize, number>; // 60, 80, 100, 120の税込送料
 }
+

@@ -5,60 +5,110 @@ import {
   ShippingBoxSize, 
   BulkSize, 
   YamatoShippingRate,
+  YamatoContractRate,
+  ShippingBreakdown,
   OrderStatus 
 } from '@/types/order';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 // ============================================================
-// ヤマト運輸 クール宅急便（冷凍便）全国運賃マスター（福岡発・税込）
+// ヤマト運輸 運送契約基本条件書（2026年09月17日付 福岡早良営業所）
+// 九州エリア発 特約宅急便運賃マスター（税抜）
 // ============================================================
-export const YAMATO_SHIPPING_RATES: YamatoShippingRate[] = [
+export const YAMATO_CONTRACT_BASE_RATES: YamatoContractRate[] = [
   {
     region: '九州',
     prefectures: ['福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県'],
-    rates: { '60': 1200, '80': 1450, '100': 1800, '120': 2250 },
+    rates: { '60': 850, '80': 1110, '100': 1390, '120': 1850 },
   },
   {
     region: '中国',
     prefectures: ['鳥取県', '島根県', '岡山県', '広島県', '山口県'],
-    rates: { '60': 1200, '80': 1450, '100': 1800, '120': 2250 },
+    rates: { '60': 850, '80': 1110, '100': 1390, '120': 1850 },
   },
   {
     region: '四国',
     prefectures: ['徳島県', '香川県', '愛媛県', '高知県'],
-    rates: { '60': 1300, '80': 1550, '100': 1900, '120': 2350 },
+    rates: { '60': 960, '80': 1220, '100': 1500, '120': 1970 },
   },
   {
     region: '関西',
     prefectures: ['滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県'],
-    rates: { '60': 1300, '80': 1550, '100': 1900, '120': 2350 },
+    rates: { '60': 960, '80': 1220, '100': 1500, '120': 1970 },
   },
   {
-    region: '中部・北陸',
-    prefectures: ['富山県', '石川県', '福井県', '岐阜県', '静岡県', '愛知県', '三重県'],
-    rates: { '60': 1450, '80': 1700, '100': 2050, '120': 2500 },
+    region: '中部',
+    prefectures: ['岐阜県', '静岡県', '愛知県', '三重県'],
+    rates: { '60': 1080, '80': 1340, '100': 1620, '120': 2100 },
   },
   {
-    region: '関東・信越',
-    prefectures: ['茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県', '山梨県', '新潟県', '長野県'],
-    rates: { '60': 1600, '80': 1850, '100': 2200, '120': 2650 },
+    region: '北陸',
+    prefectures: ['富山県', '石川県', '福井県'],
+    rates: { '60': 1080, '80': 1340, '100': 1620, '120': 2100 },
   },
   {
-    region: '東北',
-    prefectures: ['青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県'],
-    rates: { '60': 1900, '80': 2150, '100': 2500, '120': 2950 },
+    region: '信越',
+    prefectures: ['新潟県', '長野県'],
+    rates: { '60': 1320, '80': 1580, '100': 1860, '120': 2370 },
+  },
+  {
+    region: '関東',
+    prefectures: ['茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県', '山梨県'],
+    rates: { '60': 1320, '80': 1580, '100': 1860, '120': 2370 },
+  },
+  {
+    region: '南東北',
+    prefectures: ['宮城県', '山形県', '福島県'],
+    rates: { '60': 1600, '80': 1860, '100': 2140, '120': 2670 },
+  },
+  {
+    region: '北東北',
+    prefectures: ['青森県', '岩手県', '秋田県'],
+    rates: { '60': 1600, '80': 1860, '100': 2140, '120': 2670 },
   },
   {
     region: '北海道',
     prefectures: ['北海道'],
-    rates: { '60': 2400, '80': 2650, '100': 3000, '120': 3450 },
+    rates: { '60': 2120, '80': 2380, '100': 2660, '120': 3250 },
   },
   {
     region: '沖縄',
     prefectures: ['沖縄県'],
-    rates: { '60': 1450, '80': 2000, '100': 2600, '120': 3250 },
+    rates: { '60': 1200, '80': 1760, '100': 2340, '120': 2930 },
   },
 ];
+
+// 資材代・発送代金（梱包用保冷段ボール・保冷剤・出荷作業手数料：税抜200円加算）
+export const PACKAGING_HANDLING_FEE = 200;
+
+// ヤマト運輸 クール宅急便（冷凍便）付加料金（全国一律・税抜）
+export const YAMATO_COOL_SURCHARGE: Record<ShippingBoxSize, number> = {
+  '60': 250,
+  '80': 300,
+  '100': 400,
+  '120': 650,
+};
+
+// 互換用：資材代200円とクール料金を含んだ税込送料テーブル（事前計算版）
+export const YAMATO_SHIPPING_RATES: YamatoShippingRate[] = YAMATO_CONTRACT_BASE_RATES.map(item => {
+  const calcRate = (size: ShippingBoxSize) => {
+    const base = item.rates[size];
+    const cool = YAMATO_COOL_SURCHARGE[size];
+    const fee = PACKAGING_HANDLING_FEE;
+    const subtotal = base + cool + fee;
+    return Math.floor(subtotal * 1.10);
+  };
+  return {
+    region: item.region,
+    prefectures: item.prefectures,
+    rates: {
+      '60': calcRate('60'),
+      '80': calcRate('80'),
+      '100': calcRate('100'),
+      '120': calcRate('120'),
+    },
+  };
+});
 
 // ヤマト運輸 配達時間帯指定
 export const YAMATO_DELIVERY_TIME_SLOTS = [
@@ -135,21 +185,54 @@ export function calculateRecommendedBoxSize(totalLiters: number): {
 }
 
 /**
- * 都道府県と箱サイズから送料（税込）を計算
+ * 都道府県と箱サイズから送料詳細内訳を算出
+ * （特約基本運賃 + クール代金 + 資材代・発送代200円 + 消費税10%）
  */
-export function getShippingFee(prefecture: string, boxSize: ShippingBoxSize, boxCount: number = 1): number {
-  if (!prefecture) {
-    // デフォルト（福岡・九州）
-    return (YAMATO_SHIPPING_RATES[0].rates[boxSize] || 1200) * boxCount;
-  }
+export function calculateShippingBreakdown(
+  prefecture: string, 
+  boxSize: ShippingBoxSize, 
+  boxCount: number = 1,
+  includeCoolFee: boolean = true
+): ShippingBreakdown {
+  const count = Math.max(1, boxCount);
+  const cleanPref = prefecture ? prefecture.trim() : '福岡県';
 
-  const cleanPref = prefecture.trim();
-  const matched = YAMATO_SHIPPING_RATES.find(rate => 
+  const matched = YAMATO_CONTRACT_BASE_RATES.find(rate => 
     rate.prefectures.some(p => p.includes(cleanPref) || cleanPref.includes(p.replace(/都|府|県/g, '')))
   );
 
-  const singleFee = matched ? matched.rates[boxSize] : 1600; // 不明時は関東標準1600円
-  return singleFee * Math.max(1, boxCount);
+  const baseRate = matched ? matched.rates[boxSize] : (YAMATO_CONTRACT_BASE_RATES[0].rates[boxSize] || 850);
+  const coolFee = includeCoolFee ? (YAMATO_COOL_SURCHARGE[boxSize] || 0) : 0;
+  const handlingFee = PACKAGING_HANDLING_FEE; // 資材代・発送代金 200円
+
+  const unitTaxExcluded = baseRate + coolFee + handlingFee;
+  const unitTax = Math.floor(unitTaxExcluded * 0.10);
+  const unitTaxIncluded = unitTaxExcluded + unitTax;
+  const totalShippingFee = unitTaxIncluded * count;
+
+  return {
+    base_rate: baseRate,
+    cool_fee: coolFee,
+    handling_fee: handlingFee,
+    unit_tax_excluded: unitTaxExcluded,
+    unit_tax: unitTax,
+    unit_tax_included: unitTaxIncluded,
+    box_count: count,
+    total_shipping_fee: totalShippingFee,
+  };
+}
+
+/**
+ * 都道府県と箱サイズから送料（税込合計）を計算
+ */
+export function getShippingFee(
+  prefecture: string, 
+  boxSize: ShippingBoxSize, 
+  boxCount: number = 1,
+  includeCoolFee: boolean = true
+): number {
+  const breakdown = calculateShippingBreakdown(prefecture, boxSize, boxCount, includeCoolFee);
+  return breakdown.total_shipping_fee;
 }
 
 /**
@@ -216,13 +299,23 @@ export const INITIAL_ORDERS: B2BOrder[] = [
     shipping: {
       box_size: '80',
       box_count: 1,
-      shipping_fee: 1450,
+      shipping_fee: 1771,
+      breakdown: {
+        base_rate: 1110,
+        cool_fee: 300,
+        handling_fee: 200,
+        unit_tax_excluded: 1610,
+        unit_tax: 161,
+        unit_tax_included: 1771,
+        box_count: 1,
+        total_shipping_fee: 1771,
+      },
       estimated_shipping_date: getMinShippingDate(),
       preferred_delivery_date: getMinShippingDate(),
       delivery_time_slot: '午前中（8:00〜12:00）',
       tracking_number: '3412-8901-2345',
     },
-    grand_total: 10090,
+    grand_total: 10411,
     payment_method: 'invoice',
     status: 'ready',
     admin_notes: '常連店舗様。アールグレイ人気急増中',
@@ -269,12 +362,22 @@ export const INITIAL_ORDERS: B2BOrder[] = [
     shipping: {
       box_size: '80',
       box_count: 1,
-      shipping_fee: 1850,
+      shipping_fee: 2288,
+      breakdown: {
+        base_rate: 1580,
+        cool_fee: 300,
+        handling_fee: 200,
+        unit_tax_excluded: 2080,
+        unit_tax: 208,
+        unit_tax_included: 2288,
+        box_count: 1,
+        total_shipping_fee: 2288,
+      },
       estimated_shipping_date: getMinShippingDate(),
       preferred_delivery_date: getMinShippingDate(),
       delivery_time_slot: '14:00〜16:00',
     },
-    grand_total: 10930,
+    grand_total: 11368,
     payment_method: 'invoice',
     status: 'processing',
     admin_notes: 'ラーメン店様食後デザート用発注',
@@ -332,8 +435,18 @@ export async function createB2BOrder(orderData: Omit<B2BOrder, 'id' | 'order_num
   const rand = Math.floor(100 + Math.random() * 900);
   const orderNumber = `ORD-${dateStr}-${rand}`;
 
+  const breakdown = orderData.shipping.breakdown || calculateShippingBreakdown(
+    orderData.customer.prefecture,
+    orderData.shipping.box_size,
+    orderData.shipping.box_count
+  );
+
   const newOrder: B2BOrder = {
     ...orderData,
+    shipping: {
+      ...orderData.shipping,
+      breakdown,
+    },
     id: `ord-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
     order_number: orderNumber,
     created_at: now.toISOString(),

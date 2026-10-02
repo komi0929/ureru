@@ -28,14 +28,24 @@ import {
   Eye,
   Edit2
 } from 'lucide-react';
-import { B2BOrder, OrderStatus, ShippingBoxSize } from '@/types/order';
-import { getB2BOrders, updateB2BOrderStatus } from '@/lib/order-api';
+import { B2BOrder, OrderStatus, ShippingBoxSize, ShippingBreakdown } from '@/types/order';
+import { 
+  getB2BOrders, 
+  updateB2BOrderStatus, 
+  YAMATO_CONTRACT_BASE_RATES, 
+  YAMATO_COOL_SURCHARGE, 
+  PACKAGING_HANDLING_FEE,
+  calculateShippingBreakdown 
+} from '@/lib/order-api';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<B2BOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // 特約運賃マスターモーダル
+  const [isRatesModalOpen, setIsRatesModalOpen] = useState(false);
 
   // URL共有モーダル
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -179,14 +189,23 @@ ${customOrderUrl}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* ヤマト特約運賃表確認ボタン */}
+          <button
+            onClick={() => setIsRatesModalOpen(true)}
+            className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-xs flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer"
+          >
+            <Truck className="w-4 h-4 text-blue-600" />
+            <span>ヤマト特約運賃・送料マスター</span>
+          </button>
+
           {/* お客様用発注URL発行ボタン */}
           <button
             onClick={() => setIsShareModalOpen(true)}
             className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer"
           >
             <Share2 className="w-4 h-4 text-emerald-100" />
-            <span>お客様へ発注URLを発行・共有</span>
+            <span>発注URLを発行・共有</span>
           </button>
 
           <Link
@@ -587,10 +606,31 @@ ${customOrderUrl}
                     <span>商品合計 (税込)</span>
                     <span className="font-mono">¥{selectedOrder.subtotal.toLocaleString()}</span>
                   </div>
-                  <div className="p-3 bg-slate-50 flex justify-between items-center text-slate-600">
-                    <span>送料 (ヤマト冷凍 {selectedOrder.shipping.box_size}サイズ × {selectedOrder.shipping.box_count}箱)</span>
-                    <span className="font-mono font-bold">¥{selectedOrder.shipping.shipping_fee.toLocaleString()}</span>
-                  </div>
+                  {(() => {
+                    const breakdown = selectedOrder.shipping.breakdown || calculateShippingBreakdown(
+                      selectedOrder.customer.prefecture,
+                      selectedOrder.shipping.box_size,
+                      selectedOrder.shipping.box_count
+                    );
+                    return (
+                      <div className="p-3 bg-slate-50 space-y-1 text-slate-600">
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-slate-800">
+                            送料 (ヤマト冷凍 {selectedOrder.shipping.box_size}サイズ × {selectedOrder.shipping.box_count}箱)
+                          </span>
+                          <span className="font-mono font-bold text-slate-900">
+                            ¥{selectedOrder.shipping.shipping_fee.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-400 font-mono flex flex-wrap gap-x-3 gap-y-0.5 pt-1 border-t border-slate-200/60">
+                          <span>特約運賃: ¥{breakdown.base_rate}</span>
+                          <span>クール代: ¥{breakdown.cool_fee}</span>
+                          <span className="text-emerald-700 font-semibold">資材代・発送代: ¥{breakdown.handling_fee}</span>
+                          <span>消費税(10%): ¥{breakdown.unit_tax}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div className="p-3 bg-emerald-50 flex justify-between items-center font-extrabold text-sm text-emerald-950">
                     <span>ご請求総額 (税込)</span>
                     <span className="font-mono text-base text-emerald-800">¥{selectedOrder.grand_total.toLocaleString()}</span>
@@ -645,6 +685,158 @@ ${customOrderUrl}
               <button
                 onClick={() => setSelectedOrder(null)}
                 className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold text-xs transition-colors"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ヤマト特約運賃＆送料マスター表モーダル ── */}
+      {isRatesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-4xl w-full border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <Truck className="w-5 h-5 text-blue-600" />
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">
+                    ヤマト運輸 運送契約条件 ＆ 送料自動計算マスター（福岡発）
+                  </h3>
+                  <span className="text-[11px] text-slate-400">
+                    2026年09月17日契約締結（福岡早良営業所）/ 資材代・発送代金 ¥200加算反映済
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsRatesModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 text-xs overflow-y-auto flex-1">
+              
+              {/* 計算ルールのハイライト */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl">
+                  <div className="font-bold text-blue-900">① 特約基本運賃（税抜）</div>
+                  <div className="text-[11px] text-blue-700 mt-1">
+                    契約書記載の12地域別・4サイズ別特別取り決め運賃（福岡早良営業所発）
+                  </div>
+                </div>
+                <div className="p-3.5 bg-cyan-50/70 border border-cyan-200 rounded-2xl">
+                  <div className="font-bold text-cyan-900">② クール冷凍付加料（税抜）</div>
+                  <div className="text-[11px] text-cyan-700 mt-1 font-mono">
+                    60: ¥250 / 80: ¥300<br />100: ¥400 / 120: ¥650
+                  </div>
+                </div>
+                <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-2xl">
+                  <div className="font-bold text-emerald-900">③ 資材・発送代金（税抜）</div>
+                  <div className="text-[11px] text-emerald-700 mt-1">
+                    保冷箱・蓄冷剤・緩衝材・出荷作業料として<strong className="text-emerald-800">各箱 +¥200</strong>加算
+                  </div>
+                </div>
+              </div>
+
+              {/* サイズ別積載仕様（重量リミット） */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
+                <span className="font-bold text-slate-800 block text-xs">
+                  📦 発送箱サイズと積載容量・重量制限（1L = 1kg計算）
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 font-mono text-[11px]">
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                    <div className="font-bold text-slate-900 text-xs">60サイズ</div>
+                    <div className="text-emerald-700 font-semibold mt-0.5">最大 2ℓ まで</div>
+                    <div className="text-slate-400 text-[10px]">重量上限: 2kg以内</div>
+                    <div className="text-slate-500 text-[10px] mt-1">2L×1 または 1L×2</div>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                    <div className="font-bold text-slate-900 text-xs">80サイズ</div>
+                    <div className="text-emerald-700 font-semibold mt-0.5">最大 4ℓ まで</div>
+                    <div className="text-slate-400 text-[10px]">重量上限: 5kg以内</div>
+                    <div className="text-slate-500 text-[10px] mt-1">2L×2 または 1L×4</div>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                    <div className="font-bold text-slate-900 text-xs">100サイズ</div>
+                    <div className="text-emerald-700 font-semibold mt-0.5">最大 8ℓ まで</div>
+                    <div className="text-slate-400 text-[10px]">重量上限: 10kg以内</div>
+                    <div className="text-slate-500 text-[10px] mt-1">2L×4 または 1L×8 (約9kg)</div>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                    <div className="font-bold text-slate-900 text-xs">120サイズ</div>
+                    <div className="text-emerald-700 font-semibold mt-0.5">最大 12ℓ まで</div>
+                    <div className="text-slate-400 text-[10px]">重量上限: 15kg以内 (最大)</div>
+                    <div className="text-slate-500 text-[10px] mt-1">2L×6 または 1L×12 (約14kg)</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 運賃・請求送料一覧テーブル */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800 text-xs">地域別 請求送料一覧（特約運賃 + クール + 資材代200円 税込）</span>
+                  <span className="text-[11px] text-slate-400">※（ ）内は契約書特約基本運賃（税抜）</span>
+                </div>
+                <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead className="bg-slate-100 text-slate-700 border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-3 font-bold">地域</th>
+                        <th className="py-2.5 px-3">対象都道府県</th>
+                        <th className="py-2.5 px-3 text-right">60サイズ</th>
+                        <th className="py-2.5 px-3 text-right">80サイズ</th>
+                        <th className="py-2.5 px-3 text-right">100サイズ</th>
+                        <th className="py-2.5 px-3 text-right">120サイズ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-[11px]">
+                      {YAMATO_CONTRACT_BASE_RATES.map(item => {
+                        const fee60 = Math.floor((item.rates['60'] + 250 + 200) * 1.10);
+                        const fee80 = Math.floor((item.rates['80'] + 300 + 200) * 1.10);
+                        const fee100 = Math.floor((item.rates['100'] + 400 + 200) * 1.10);
+                        const fee120 = Math.floor((item.rates['120'] + 650 + 200) * 1.10);
+
+                        return (
+                          <tr key={item.region} className="hover:bg-slate-50">
+                            <td className="py-2 px-3 font-bold text-slate-900 font-sans whitespace-nowrap">
+                              {item.region}
+                            </td>
+                            <td className="py-2 px-3 text-slate-500 font-sans text-[10px] max-w-xs truncate">
+                              {item.prefectures.join('、')}
+                            </td>
+                            <td className="py-2 px-3 text-right">
+                              <span className="font-bold text-slate-900">¥{fee60.toLocaleString()}</span>
+                              <span className="text-[10px] text-slate-400 block font-normal">(¥{item.rates['60']})</span>
+                            </td>
+                            <td className="py-2 px-3 text-right">
+                              <span className="font-bold text-slate-900">¥{fee80.toLocaleString()}</span>
+                              <span className="text-[10px] text-slate-400 block font-normal">(¥{item.rates['80']})</span>
+                            </td>
+                            <td className="py-2 px-3 text-right">
+                              <span className="font-bold text-slate-900">¥{fee100.toLocaleString()}</span>
+                              <span className="text-[10px] text-slate-400 block font-normal">(¥{item.rates['100']})</span>
+                            </td>
+                            <td className="py-2 px-3 text-right">
+                              <span className="font-bold text-slate-900">¥{fee120.toLocaleString()}</span>
+                              <span className="text-[10px] text-slate-400 block font-normal">(¥{item.rates['120']})</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+              <button
+                onClick={() => setIsRatesModalOpen(false)}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer"
               >
                 閉じる
               </button>

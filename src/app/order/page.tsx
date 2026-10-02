@@ -47,6 +47,8 @@ import {
   BOX_CAPACITIES, 
   calculateRecommendedBoxSize, 
   getShippingFee, 
+  calculateShippingBreakdown,
+  PACKAGING_HANDLING_FEE,
   getMinShippingDate, 
   createB2BOrder, 
   getB2BOrders,
@@ -201,11 +203,13 @@ export default function CustomerOrderPage() {
   const appliedBoxSize: ShippingBoxSize = manualBoxSize || autoBoxConfig.boxSize;
   const appliedBoxCount = autoBoxConfig.boxCount;
 
-  // ヤマトクール便送料の自動計算
-  const shippingFee = useMemo(() => {
-    if (cartItems.length === 0) return 0;
-    return getShippingFee(customer.prefecture, appliedBoxSize, appliedBoxCount);
+  // ヤマトクール便送料および内訳の自動計算
+  const shippingBreakdown = useMemo(() => {
+    if (cartItems.length === 0) return null;
+    return calculateShippingBreakdown(customer.prefecture, appliedBoxSize, appliedBoxCount);
   }, [customer.prefecture, appliedBoxSize, appliedBoxCount, cartItems]);
+
+  const shippingFee = shippingBreakdown ? shippingBreakdown.total_shipping_fee : 0;
 
   // 総合計金額
   const grandTotal = subtotal + shippingFee;
@@ -241,6 +245,7 @@ export default function CustomerOrderPage() {
           box_size: appliedBoxSize,
           box_count: appliedBoxCount,
           shipping_fee: shippingFee,
+          breakdown: shippingBreakdown || undefined,
           estimated_shipping_date: shippingDate,
           preferred_delivery_date: shippingDate,
           delivery_time_slot: deliveryTimeSlot,
@@ -331,7 +336,18 @@ export default function CustomerOrderPage() {
             <div className="flex justify-between border-b border-slate-200/70 pb-2">
               <span className="text-slate-500">発送サイズ / 便種</span>
               <span className="text-slate-800">
-                ヤマト冷凍クール便 {submittedOrder.shipping.box_size}サイズ ({submittedOrder.total_volume_liters}ℓ)
+                ヤマト冷凍クール便 {submittedOrder.shipping.box_size}サイズ ({submittedOrder.shipping.box_count}箱 / {submittedOrder.total_volume_liters}ℓ)
+              </span>
+            </div>
+            <div className="flex justify-between border-b border-slate-200/70 pb-2">
+              <span className="text-slate-500">クール便送料 (税込)</span>
+              <span className="font-mono font-semibold text-slate-900">
+                ¥{submittedOrder.shipping.shipping_fee.toLocaleString()}
+                {submittedOrder.shipping.breakdown && (
+                  <span className="text-[10px] text-slate-400 font-normal ml-1">
+                    (基本¥{submittedOrder.shipping.breakdown.base_rate} + クール¥{submittedOrder.shipping.breakdown.cool_fee} + 資材¥{submittedOrder.shipping.breakdown.handling_fee} + 税)
+                  </span>
+                )}
               </span>
             </div>
             <div className="flex justify-between pt-1 text-sm font-bold text-slate-900">
@@ -907,9 +923,36 @@ export default function CustomerOrderPage() {
                     <span className="font-semibold text-slate-800">{customer.prefecture}</span>
                   </div>
 
-                  <div className="flex justify-between items-center text-slate-600 pt-1 border-t border-slate-200/60">
-                    <span>冷凍クール便送料 (税込):</span>
-                    <span className="font-mono font-bold text-slate-900">
+                  {shippingBreakdown && (
+                    <div className="pt-2 border-t border-slate-200/60 space-y-1 text-[11px] text-slate-500 font-mono">
+                      <div className="flex justify-between">
+                        <span>特約基本運賃:</span>
+                        <span>¥{shippingBreakdown.base_rate.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>クール冷凍代:</span>
+                        <span>¥{shippingBreakdown.cool_fee.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-emerald-700 font-medium">
+                        <span>資材代・発送代金:</span>
+                        <span>+¥{shippingBreakdown.handling_fee.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-slate-400">
+                        <span>消費税(10%):</span>
+                        <span>¥{shippingBreakdown.unit_tax.toLocaleString()}</span>
+                      </div>
+                      {appliedBoxCount > 1 && (
+                        <div className="flex justify-between text-slate-700 font-bold pt-0.5 border-t border-dashed border-slate-200">
+                          <span>箱数:</span>
+                          <span>× {appliedBoxCount}箱</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center text-slate-700 pt-1.5 border-t border-slate-200 font-medium">
+                    <span className="font-bold text-slate-900">冷凍クール便送料 (税込):</span>
+                    <span className="font-mono font-bold text-emerald-700 text-sm">
                       {cartItems.length > 0 ? `¥${shippingFee.toLocaleString()}` : '¥0'}
                     </span>
                   </div>
