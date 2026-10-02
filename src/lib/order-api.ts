@@ -110,6 +110,37 @@ export const YAMATO_SHIPPING_RATES: YamatoShippingRate[] = YAMATO_CONTRACT_BASE_
   };
 });
 
+// ============================================================
+// 業務用バルクアイス卸価格設定（1ml = 2円 税抜、食品軽減税率8%）
+// 1L: 2,000円（+税8% = 税込2,160円）
+// 2L: 4,000円（+税8% = 税込4,320円）
+// ============================================================
+export const BULK_PRICING: Record<BulkSize, {
+  volumeMl: number;
+  priceExclTax: number;     // 税抜価格 (1L: 2,000円 / 2L: 4,000円)
+  taxRate: number;          // 軽減税率 8% (0.08)
+  taxAmount: number;        // 消費税額 (1L: 160円 / 2L: 320円)
+  priceInclTax: number;     // 税込価格 (1L: 2,160円 / 2L: 4,320円)
+  label: string;
+}> = {
+  '1L': {
+    volumeMl: 1000,
+    priceExclTax: 2000,
+    taxRate: 0.08,
+    taxAmount: 160,
+    priceInclTax: 2160,
+    label: '1L コンパクト容器（約10ディッシャー）',
+  },
+  '2L': {
+    volumeMl: 2000,
+    priceExclTax: 4000,
+    taxRate: 0.08,
+    taxAmount: 320,
+    priceInclTax: 4320,
+    label: '2L 業務用バルク容器（約20ディッシャー）',
+  },
+};
+
 // ヤマト運輸 配達時間帯指定
 export const YAMATO_DELIVERY_TIME_SLOTS = [
   '希望なし',
@@ -351,14 +382,14 @@ export const INITIAL_ORDERS: B2BOrder[] = [
         recipe_id: 'recipe-vanilla',
         recipe_name: '米粉アイス【バニラ】',
         size: '1L',
-        unit_price: 2380,
+        unit_price: 2160,
         quantity: 2,
         total_volume_liters: 2,
-        subtotal: 4760,
+        subtotal: 4320,
       }
     ],
     total_volume_liters: 4,
-    subtotal: 9080,
+    subtotal: 8640,
     shipping: {
       box_size: '80',
       box_count: 1,
@@ -377,7 +408,7 @@ export const INITIAL_ORDERS: B2BOrder[] = [
       preferred_delivery_date: getMinShippingDate(),
       delivery_time_slot: '14:00〜16:00',
     },
-    grand_total: 11368,
+    grand_total: 10928,
     payment_method: 'invoice',
     status: 'processing',
     admin_notes: 'ラーメン店様食後デザート用発注',

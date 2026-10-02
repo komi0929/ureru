@@ -49,6 +49,7 @@ import {
   getShippingFee, 
   calculateShippingBreakdown,
   PACKAGING_HANDLING_FEE,
+  BULK_PRICING,
   getMinShippingDate, 
   createB2BOrder, 
   getB2BOrders,
@@ -167,10 +168,10 @@ export default function CustomerOrderPage() {
   // カートアイテム一覧と計算
   const cartItems: OrderItem[] = useMemo(() => {
     return Object.entries(cart).map(([key, item]) => {
-      const is2L = item.size === '2L';
-      // 2L標準卸価格: 4,320円、1L標準卸価格: 2,380円 (税込)
-      const unitPrice = is2L ? 4320 : 2380;
-      const volumeLiters = is2L ? 2 * item.quantity : 1 * item.quantity;
+      const pricing = BULK_PRICING[item.size];
+      // 1ml = 2円税抜: 1L = 2,000円 (+税8% = 2,160円) / 2L = 4,000円 (+税8% = 4,320円)
+      const unitPrice = pricing.priceInclTax;
+      const volumeLiters = item.size === '2L' ? 2 * item.quantity : 1 * item.quantity;
       return {
         id: key,
         recipe_id: item.recipe.id,
@@ -193,6 +194,12 @@ export default function CustomerOrderPage() {
   const subtotal = useMemo(() => {
     return cartItems.reduce((sum, item) => sum + item.subtotal, 0);
   }, [cartItems]);
+
+  // 商品の税抜小計および消費税（軽減税率8%）
+  const productSubtotalExclTax = useMemo(() => {
+    return cartItems.reduce((sum, item) => sum + (BULK_PRICING[item.size].priceExclTax * item.quantity), 0);
+  }, [cartItems]);
+  const productTax8 = subtotal - productSubtotalExclTax;
 
   // 自動判定された箱サイズ
   const autoBoxConfig = useMemo(() => {
@@ -493,8 +500,13 @@ export default function CustomerOrderPage() {
                     お好みのフレーバーと容量（1L または 2L）を選んで数量を追加してください。
                   </p>
                 </div>
-                <div className="text-xs text-slate-500 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
-                  全10種 クラフトフレーバー
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
+                    卸価格: 1mℓ 2円（税抜）
+                  </span>
+                  <div className="text-xs text-slate-500 bg-white px-3 py-1.5 rounded-xl border border-slate-200 hidden sm:block">
+                    全10種 クラフト
+                  </div>
                 </div>
               </div>
 
@@ -538,8 +550,13 @@ export default function CustomerOrderPage() {
                               <span className="text-xs font-bold text-slate-900">📦 2L バルク容器</span>
                               <span className="text-[10px] font-mono text-slate-500">（約20ディッシャー）</span>
                             </div>
-                            <div className="text-xs font-bold text-emerald-700 font-mono mt-0.5">
-                              ¥4,320 <span className="text-[10px] font-normal text-slate-400">税込</span>
+                            <div className="flex items-baseline gap-1 mt-0.5">
+                              <span className="text-xs font-bold text-emerald-700 font-mono">
+                                ¥4,000 <span className="text-[10px] font-normal text-slate-400">税抜</span>
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-400">
+                                (税込 ¥4,320)
+                              </span>
                             </div>
                           </div>
 
@@ -572,8 +589,13 @@ export default function CustomerOrderPage() {
                               <span className="text-xs font-bold text-slate-900">🍨 1L コンパクト</span>
                               <span className="text-[10px] font-mono text-slate-500">（約10ディッシャー）</span>
                             </div>
-                            <div className="text-xs font-bold text-emerald-700 font-mono mt-0.5">
-                              ¥2,380 <span className="text-[10px] font-normal text-slate-400">税込</span>
+                            <div className="flex items-baseline gap-1 mt-0.5">
+                              <span className="text-xs font-bold text-emerald-700 font-mono">
+                                ¥2,000 <span className="text-[10px] font-normal text-slate-400">税抜</span>
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-400">
+                                (税込 ¥2,160)
+                              </span>
                             </div>
                           </div>
 
@@ -960,12 +982,17 @@ export default function CustomerOrderPage() {
 
                 {/* 金額合計 */}
                 <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
-                  <div className="flex justify-between text-slate-500">
-                    <span>商品小計 (税込)</span>
+                  <div className="flex justify-between text-slate-600">
+                    <span>商品小計 (税込・軽減税率8%)</span>
                     <span className="font-mono font-bold text-slate-800">¥{subtotal.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-slate-500">
-                    <span>送料合計 (税込)</span>
+                  {cartItems.length > 0 && (
+                    <div className="text-[10px] text-slate-400 font-mono text-right">
+                      (税抜: ¥{productSubtotalExclTax.toLocaleString()} / 消費税8%: ¥{productTax8.toLocaleString()})
+                    </div>
+                  )}
+                  <div className="flex justify-between text-slate-600">
+                    <span>送料合計 (税込・標準税率10%)</span>
                     <span className="font-mono font-bold text-slate-800">¥{shippingFee.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm font-extrabold text-slate-900 pt-2 border-t border-slate-200">
