@@ -129,7 +129,7 @@ export const BULK_PRICING: Record<BulkSize, {
     taxRate: 0.08,
     taxAmount: 160,
     priceInclTax: 2160,
-    label: '1L コンパクト容器（約10ディッシャー）',
+    label: '1L バルク容器',
   },
   '2L': {
     volumeMl: 2000,
@@ -137,7 +137,7 @@ export const BULK_PRICING: Record<BulkSize, {
     taxRate: 0.08,
     taxAmount: 320,
     priceInclTax: 4320,
-    label: '2L 業務用バルク容器（約20ディッシャー）',
+    label: '2L バルク容器',
   },
 };
 
