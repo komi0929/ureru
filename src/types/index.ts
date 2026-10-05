@@ -44,6 +44,11 @@ export interface Lead {
   assigned_to?: string | null;
   created_at: string;
   updated_at?: string;
+  genre?: string | null;
+  area?: string | null;
+  prefecture?: string | null;
+  features?: string[];
+  excluded?: boolean;
 }
 
 // ============================================================

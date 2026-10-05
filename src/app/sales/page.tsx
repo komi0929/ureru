@@ -26,7 +26,6 @@ import {
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { mockLeads } from '@/lib/mock-data';
 import { Lead } from '@/types';
-import { scoreLead, getScoreColor, getScoreEmoji } from '@/lib/lead-scoring';
 
 export const DEFAULT_DM_TEMPLATE = `{{name}}こんにちは！突然のご連絡失礼いたします✨
 福岡でプラントベース（乳・卵不使用）のクラフトアイスを製造しているSoyStoriesと申します🌿
@@ -53,7 +52,6 @@ function formatDM(template: string, lead?: { display_name?: string | null; name?
 type PrewarmStage = 'none' | 'day1' | 'day2' | 'day3';
 
 interface QueueLead extends Lead {
-  score: number;
   prewarm: PrewarmStage;
 }
 
@@ -136,28 +134,68 @@ export default function SalesModePage() {
   };
 
   const loadQueue = async () => {
-    let leads: Lead[] = [];
+    let combinedLeads = [...mockLeads];
     if (isSupabaseConfigured()) {
       try {
         const { data } = await supabase
           .from('leads')
           .select('*')
-          .in('status', ['new', 'dm_drafted', 'prewarm'])
           .order('created_at', { ascending: false });
-        if (data) leads = data as Lead[];
+
+        if (data && data.length > 0) {
+          const dbLeadsMap = new Map<string, Lead>();
+          const customDbLeads: Lead[] = [];
+
+          data.forEach((item: Lead) => {
+            if (item.instagram_id) {
+              dbLeadsMap.set(item.instagram_id.toLowerCase(), item);
+            }
+          });
+
+          combinedLeads = mockLeads.map(masterLead => {
+            const dbMatch = dbLeadsMap.get(masterLead.instagram_id.toLowerCase());
+            if (dbMatch) {
+              return {
+                ...masterLead,
+                status: dbMatch.status || masterLead.status,
+                notes: dbMatch.notes || masterLead.notes,
+              };
+            }
+            return masterLead;
+          });
+
+          const masterIgIds = new Set(mockLeads.map(m => m.instagram_id.toLowerCase()));
+          data.forEach((item: Lead) => {
+            if (item.instagram_id && !masterIgIds.has(item.instagram_id.toLowerCase())) {
+              customDbLeads.push(item);
+            }
+          });
+
+          combinedLeads = [...customDbLeads, ...combinedLeads];
+        }
       } catch (e) { console.warn(e); }
     }
-    if (leads.length === 0) {
-      leads = mockLeads.filter(l => l.status === 'new' || l.status === 'dm_drafted');
+
+    // 新規またはDM下書き対象のみ
+    let activeLeads = combinedLeads.filter(l => l.status === 'new' || l.status === 'dm_drafted');
+
+    // 除外リストにある店舗をキューから除外
+    let excludedIds: string[] = [];
+    try {
+      const saved = localStorage.getItem('soystories_excluded_restaurant_ids_v1');
+      if (saved) excludedIds = JSON.parse(saved);
+    } catch (e) {
+      console.warn(e);
     }
 
-    const scored: QueueLead[] = leads.map(l => ({
-      ...l,
-      score: scoreLead(l).total,
-      prewarm: ((l as any).prewarm_stage as PrewarmStage) || 'none',
-    })).sort((a, b) => b.score - a.score);
+    const filtered = activeLeads.filter(l => !excludedIds.includes(l.id));
 
-    setQueue(scored);
+    const queueLeads: QueueLead[] = filtered.map(l => ({
+      ...l,
+      prewarm: ((l as any).prewarm_stage as PrewarmStage) || 'none',
+    }));
+
+    setQueue(queueLeads);
     setCurrentIndex(0);
   };
 
@@ -239,12 +277,11 @@ export default function SalesModePage() {
       try {
         const { data } = await supabase.from('leads').insert([newLead]).select().single();
         if (data) {
-          const scored: QueueLead = {
+          const newQueueLead: QueueLead = {
             ...(data as Lead),
-            score: scoreLead(data as Lead).total,
             prewarm: 'none',
           };
-          setQueue(prev => [scored, ...prev]);
+          setQueue(prev => [newQueueLead, ...prev]);
           setCurrentIndex(0);
         }
       } catch (e) { console.warn(e); }
@@ -264,7 +301,6 @@ export default function SalesModePage() {
         tags: [],
         notes: null,
         created_at: new Date().toISOString(),
-        score: 30,
         prewarm: 'none',
       } as QueueLead;
       setQueue(prev => [fakeLead, ...prev]);
@@ -383,15 +419,17 @@ export default function SalesModePage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                {/* Score */}
-                <span className={`px-3 py-1 rounded-full text-sm font-bold border ${getScoreColor(currentLead.score)}`}>
-                  {getScoreEmoji(currentLead.score)} {currentLead.score}点
+              <div className="flex items-center gap-2.5">
+                {/* Genre badge */}
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
+                  {currentLead.genre || currentLead.business_type || 'ヴィーガン飲食店'}
                 </span>
-                {/* Business type */}
-                <span className="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600">
-                  {currentLead.business_type || '未分類'}
-                </span>
+                {/* Area badge */}
+                {currentLead.area && (
+                  <span className="px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-700 font-semibold">
+                    📍 {currentLead.area}
+                  </span>
+                )}
                 {/* Prewarm */}
                 <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${prewarmLabel[currentLead.prewarm].color}`}>
                   {prewarmLabel[currentLead.prewarm].icon}
@@ -521,8 +559,8 @@ export default function SalesModePage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getScoreColor(lead.score)}`}>
-                    {getScoreEmoji(lead.score)} {lead.score}
+                  <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-gray-100 text-gray-700">
+                    {lead.genre || lead.business_type || 'ヴィーガン'}
                   </span>
                   <ChevronRight className="w-4 h-4 text-gray-300" />
                 </div>
@@ -565,7 +603,7 @@ export default function SalesModePage() {
                   type="text"
                   value={quickStoreName}
                   onChange={e => setQuickStoreName(e.target.value)}
-                  placeholder="カフェ木漏れ日"
+                  placeholder="例: NICE plant-based cafe"
                   className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 outline-none"
                 />
               </div>
