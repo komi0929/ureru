@@ -14,7 +14,7 @@ export interface VeganRestaurantItem {
 
 export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
   // ============================================================
-  // 🍜 ラーメン（41店舗）
+  // 🍜 ラーメン（50店舗）
   // ============================================================
   {
     id: 'vegan-ramen-01',
@@ -467,9 +467,107 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
     profile_text: '那覇国際通り・のれん街店。沖縄限定のヴィーガン担々麺やベジソバを展開。観光客・地元客で賑わう。',
     features: ['国際通りすぐ', '沖縄限定ベジソバ', '年中無休']
   },
-
+  {
+    id: 'vegan-ramen-42',
+    name: '采菜 AYASAI（京都二条・京町家ヴィーガンラーメン）',
+    instagram_id: '@ayasai_kyoto',
+    instagram_url: 'https://www.instagram.com/ayasai_kyoto',
+    genre: 'ラーメン',
+    area: '京都市中京区二条',
+    prefecture: '京都府',
+    profile_text: '二条城近くの京町家で提供される特製野菜出汁・豆乳ベースの完全菜食ラーメン。グルテンフリー麺対応。',
+    features: ['京町家', '豆乳スープ', 'グルテンフリー対応', '二条城近く']
+  },
+  {
+    id: 'vegan-ramen-43',
+    name: 'Vegans Cafe and Restaurant（伏見稲荷）',
+    instagram_id: '@veganscafe',
+    instagram_url: 'https://www.instagram.com/veganscafe',
+    genre: 'ラーメン',
+    area: '京都市伏見区深草',
+    prefecture: '京都府',
+    profile_text: '伏見稲荷の有名老舗ヴィーガン店。濃厚味噌ヴィーガンラーメンや炭火焼風丼、スイーツがインバウンド客に大人気。',
+    features: ['伏見稲荷', '濃厚味噌ラーメン', '老舗ヴィーガン', '外国人観光客多数']
+  },
+  {
+    id: 'vegan-ramen-44',
+    name: 'キッチンのぎ（沖縄市マクロビ・ヴィーガン麺）',
+    instagram_id: '@kitchen_nogi',
+    instagram_url: 'https://www.instagram.com/kitchen_nogi',
+    genre: 'ラーメン',
+    area: '沖縄市中央',
+    prefecture: '沖縄県',
+    profile_text: '無添加・マクロビオティック仕込みのヴィーガンラーメンや沖縄そば。白砂糖・化学調味料一切不使用。',
+    features: ['無添加マクロビ', 'ヴィーガンラーメン', '白砂糖不使用', '沖縄市']
+  },
+  {
+    id: 'vegan-ramen-45',
+    name: '台湾ベジーキッチン 楽膳（大阪東三国）',
+    instagram_id: '@rakuzen_vegan',
+    instagram_url: 'https://www.instagram.com/rakuzen_vegan',
+    genre: 'ラーメン',
+    area: '大阪市淀川区東三国',
+    prefecture: '大阪府',
+    profile_text: '台湾素食の本格薬膳ヴィーガンラーメン＆豆乳タンタン麺。五葷抜き・オリエンタルヴィーガン完全対応。',
+    features: ['台湾素食', '薬膳タンタン麺', '五葷抜き対応', '東三国']
+  },
+  {
+    id: 'vegan-ramen-46',
+    name: 'UNTAPPED Breakfast&Pub（札幌北18条）',
+    instagram_id: '@untappedhostel',
+    instagram_url: 'https://www.instagram.com/untappedhostel',
+    genre: 'ラーメン',
+    area: '札幌市北区北18条',
+    prefecture: '北海道',
+    profile_text: '自家製昆布・椎茸出汁のヴィーガンヌードルとスパイス料理。ゲストハウス併設で多国籍なヴィーガン旅行者が集う。',
+    features: ['札幌ゲストハウス', '和出汁ヴィーガン麺', '多国籍', '北18条']
+  },
+  {
+    id: 'vegan-ramen-47',
+    name: 'Green Soba Bar Niseko（北海道ニセコ）',
+    instagram_id: '@greensobabar',
+    instagram_url: 'https://www.instagram.com/greensobabar',
+    genre: 'ラーメン',
+    area: '虻田郡倶知安町',
+    prefecture: '北海道',
+    profile_text: '外国人スキー客で賑わうヴィーガン十割蕎麦＆プラントベース麺スタンド。濃厚な植物性出汁と食後デザートが人気。',
+    features: ['ニセコ国際リゾート', 'ヴィーガン十割蕎麦', '富裕層インバウンド', 'プラントベース出汁']
+  },
+  {
+    id: 'vegan-ramen-48',
+    name: 'ナチュラルトーン（沖縄宜野湾・ヴィーガン沖縄そば）',
+    instagram_id: '@naturaltone_okinawa',
+    instagram_url: 'https://www.instagram.com/naturaltone_okinawa',
+    genre: 'ラーメン',
+    area: '宜野湾市大山',
+    prefecture: '沖縄県',
+    profile_text: '日本唯一の100%植物性ヴィーガン沖縄そば専門店。自家製植物性スープと有機小麦麺。',
+    features: ['100%植物性', 'ヴィーガン沖縄そば', '宜野湾', '自然栽培']
+  },
+  {
+    id: 'vegan-ramen-49',
+    name: '薬膳拉麺 ドラゴン（東京上野）',
+    instagram_id: '@yakuzen_dragon',
+    instagram_url: 'https://www.instagram.com/yakuzen_dragon',
+    genre: 'ラーメン',
+    area: '台東区上野',
+    prefecture: '東京都',
+    profile_text: '漢方生薬と豆乳仕立ての完全植物性薬膳ヴィーガン拉麺。上野観光の外国人旅行者から大評判。',
+    features: ['上野名所', '薬膳拉麺', '豆乳スープ', '完全植物性']
+  },
+  {
+    id: 'vegan-ramen-50',
+    name: '菜食Ken（東京西葛西）',
+    instagram_id: '@saishoku_ken',
+    instagram_url: 'https://www.instagram.com/saishoku_ken',
+    genre: 'ラーメン',
+    area: '江戸川区西葛西',
+    prefecture: '東京都',
+    profile_text: '100%植物性のヴィーガン味噌ラーメンや担々麺を提供する菜食中華・ラーメン店。リピーター多数。',
+    features: ['菜食中華', '植物性味噌ラーメン', '西葛西', 'リピーター多数']
+  },
   // ============================================================
-  // 🍔 バーガー＆ダイナー（12店舗）
+  // 🍔 バーガー＆ダイナー（25店舗）
   // ============================================================
   {
     id: 'vegan-burger-01',
@@ -603,9 +701,151 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
     profile_text: '渋谷ロフト内の最新プラントベースカフェ。濃厚ヴィーガンチーズバーガーやプラントベーススイーツを多数展開。',
     features: ['渋谷ロフト内', '進化系プラントベース', '若年層・Z世代支持']
   },
-
+  {
+    id: 'vegan-burger-13',
+    name: 'BLUE POINT FALAFEL & COFFEE（沖縄読谷村）',
+    instagram_id: '@bluepoint_falafel',
+    instagram_url: 'https://www.instagram.com/bluepoint_falafel',
+    genre: 'バーガー',
+    area: '中頭郡読谷村',
+    prefecture: '沖縄県',
+    profile_text: '海が目の前の100%ヴィーガンカフェ。特製ヘンプシードバーガーや揚げたてファラフェルサンドが人気。',
+    features: ['読谷村オーシャンビュー', 'ヘンプバーガー', '100%ヴィーガン', 'ファラフェル']
+  },
+  {
+    id: 'vegan-burger-14',
+    name: 'base island kitchen（大阪中崎町）',
+    instagram_id: '@baseislandkitchen',
+    instagram_url: 'https://www.instagram.com/baseislandkitchen',
+    genre: 'バーガー',
+    area: '大阪市北区中崎町',
+    prefecture: '大阪府',
+    profile_text: '100%植物性のヴィーガンスマッシュバーガーとクラフトビール。外国人旅行者で賑わうアメリカンダイナー。',
+    features: ['大阪中崎町', 'スマッシュバーガー', 'クラフトビール', 'オールプラントベース']
+  },
+  {
+    id: 'vegan-burger-15',
+    name: 'cafe pony（熊本市ヴィーガンカフェ）',
+    instagram_id: '@cafepony_kumamoto',
+    instagram_url: 'https://www.instagram.com/cafepony_kumamoto',
+    genre: 'バーガー',
+    area: '熊本市中央区',
+    prefecture: '熊本県',
+    profile_text: '熊本県産無農薬野菜と自家製大豆パティの手作りヴィーガンバーガー。スイーツ需要も極めて高い。',
+    features: ['熊本市中心地', '無農薬野菜', '大豆パティ', '手作りスイーツ人気']
+  },
+  {
+    id: 'vegan-burger-16',
+    name: 'KOMEDA is □（東銀座）',
+    instagram_id: '@komeda_is_square',
+    instagram_url: 'https://www.instagram.com/komeda_is_square',
+    genre: 'バーガー',
+    area: '中央区銀座',
+    prefecture: '東京都',
+    profile_text: 'コメダ珈琲が手がける100%プラントベース喫茶。名物「べっぴんバーガー」や大豆ミートカツバーガーを展開。',
+    features: ['東銀座', 'コメダ公式プラントベース', 'べっぴんバーガー', '話題性抜群']
+  },
+  {
+    id: 'vegan-burger-17',
+    name: 'Ballon Tokyo（中目黒）',
+    instagram_id: '@ballon_tokyo',
+    instagram_url: 'https://www.instagram.com/ballon_tokyo',
+    genre: 'バーガー',
+    area: '目黒区中目黒',
+    prefecture: '東京都',
+    profile_text: '100%ヴィーガンのファラフェルスタンド。豆乳ソフトクリームとバーガーの組み合わせが女性客に大人気。',
+    features: ['中目黒', '100%ヴィーガン', 'ファラフェルサンド', '豆乳ソフト人気']
+  },
+  {
+    id: 'vegan-burger-18',
+    name: 'MR. FARMER 表参道本店',
+    instagram_id: '@mr.farmer_',
+    instagram_url: 'https://www.instagram.com/mr.farmer_',
+    genre: 'バーガー',
+    area: '渋谷区神宮前',
+    prefecture: '東京都',
+    profile_text: '自慢のプラントベースグルメバーガーやヴィーガンアボカドトーストを提供する人気カフェ。',
+    features: ['表参道一等地', 'プラントベースバーガー', '契約農家野菜', 'トレンド発信地']
+  },
+  {
+    id: 'vegan-burger-19',
+    name: 'Organic Table by LAPAZ（外苑前）',
+    instagram_id: '@lapaz_tokyo',
+    instagram_url: 'https://www.instagram.com/lapaz_tokyo',
+    genre: 'バーガー',
+    area: '渋谷区神宮前',
+    prefecture: '東京都',
+    profile_text: '大豆ミートのジューシーなヴィーガンバーガーやプラントベーススイーツを提供するオーガニックダイナー。',
+    features: ['外苑前・青山', '大豆ミートバーガー', 'オーガニック', '洗練された空間']
+  },
+  {
+    id: 'vegan-burger-20',
+    name: 'Plant More 新宿ルミネ',
+    instagram_id: '@plantmore_official',
+    instagram_url: 'https://www.instagram.com/plantmore_official',
+    genre: 'バーガー',
+    area: '新宿区西新宿',
+    prefecture: '東京都',
+    profile_text: '新宿駅直結のプラントベースダイナー。濃厚チーズ風ヴィーガンバーガーやグレインズボウルを展開。',
+    features: ['新宿ルミネ直結', 'ヴィーガンバーガー', 'グレインズボウル', 'アクセス抜群']
+  },
+  {
+    id: 'vegan-burger-21',
+    name: 'MATSUONTOKO（京都新京極）',
+    instagram_id: '@matsuontoko',
+    instagram_url: 'https://www.instagram.com/matsuontoko',
+    genre: 'バーガー',
+    area: '京都市中京区新京極',
+    prefecture: '京都府',
+    profile_text: '京都新京極の有名ヴィーガンバーガー＆カフェ。ボリューミーなアボカドチーズバーガーや豆乳シェイク。',
+    features: ['京都新京極', 'ヴィーガンバーガー専門店', '豆乳シェイク', '外国人行列店']
+  },
+  {
+    id: 'vegan-burger-22',
+    name: 'The Castle Kobe（神戸三宮）',
+    instagram_id: '@thecastle_kobe',
+    instagram_url: 'https://www.instagram.com/thecastle_kobe',
+    genre: 'バーガー',
+    area: '神戸市中央区中山手通',
+    prefecture: '兵庫県',
+    profile_text: '外国人客が集うヴィーガンバーガー＆プラントタコスダイナー。クラフトビールとデザートの組み合わせが人気。',
+    features: ['神戸三宮', 'ヴィーガンバーガー', 'クラフトビール', '国際色豊か']
+  },
+  {
+    id: 'vegan-burger-23',
+    name: 'GOKAN Plant-based Diner（名古屋伏見）',
+    instagram_id: '@gokan_diner',
+    instagram_url: 'https://www.instagram.com/gokan_diner',
+    genre: 'バーガー',
+    area: '名古屋市中区錦',
+    prefecture: '愛知県',
+    profile_text: '地元愛知の有機野菜とオリジナル大豆パティのヴィーガンバーガー。カフェ利用も人気。',
+    features: ['名古屋伏見', '愛知産有機野菜', '自家製バンズ', '大豆ミートパティ']
+  },
+  {
+    id: 'vegan-burger-24',
+    name: 'EARTHFUL CAFE Okinawa（沖縄糸満）',
+    instagram_id: '@earthful_cafe',
+    instagram_url: 'https://www.instagram.com/earthful_cafe',
+    genre: 'バーガー',
+    area: '糸満市西崎',
+    prefecture: '沖縄県',
+    profile_text: '海の見える100%ヴィーガンダイナー。ボリューム満点の特製ベジバーガーとスムージー。',
+    features: ['沖縄糸満', 'オーシャンフロント', '100%植物性', 'ベジバーガー名店']
+  },
+  {
+    id: 'vegan-burger-25',
+    name: 'Kuumba du Falafel（渋谷神泉）',
+    instagram_id: '@kuumbadufalafel',
+    instagram_url: 'https://www.instagram.com/kuumbadufalafel',
+    genre: 'バーガー',
+    area: '目黒区青葉台',
+    prefecture: '東京都',
+    profile_text: '東京を代表する本場仕込みのファラフェルサンド専門店。香ばしいピタパンとひよこ豆コロッケ。',
+    features: ['渋谷神泉', 'ファラフェルサンド名店', '本場イスラエル流', 'ヴィーガン定番']
+  },
   // ============================================================
-  // ☕ カフェ＆スイーツ（20店舗）
+  // ☕ カフェ＆スイーツ（55店舗）
   // ============================================================
   {
     id: 'vegan-cafe-01',
@@ -827,9 +1067,393 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
     profile_text: '野生の菌でパンとクラフトビールを醸す全国的知名度のカフェ。ナチュラルなヴィーガンスイーツも展開。',
     features: ['全国的知名度', '野生の菌・天然酵母', '自然派クラフト']
   },
-
+  {
+    id: 'vegan-cafe-21',
+    name: 'Salon de the Rima（葛飾区新小岩）',
+    instagram_id: '@salon_de_the_rima',
+    instagram_url: 'https://www.instagram.com/salon_de_the_rima',
+    genre: 'カフェ',
+    area: '葛飾区新小岩',
+    prefecture: '東京都',
+    profile_text: '無農薬玄米粉を使った100%グルテンフリー＆ヴィーガンのパティスリーカフェ。華やかな生ケーキ。',
+    features: ['新小岩', '無農薬玄米粉', 'ヴィーガン生ケーキ', 'グルテンフリー']
+  },
+  {
+    id: 'vegan-cafe-22',
+    name: 'Universal Bakes and Cafe（世田谷代田）',
+    instagram_id: '@universalbakes_tokyo',
+    instagram_url: 'https://www.instagram.com/universalbakes_tokyo',
+    genre: 'カフェ',
+    area: '世田谷区代田',
+    prefecture: '東京都',
+    profile_text: '100%ヴィーガンのベーカリーカフェ。アイスや焼き菓子との相乗効果が抜群。',
+    features: ['世田谷代田', '100%ヴィーガンベーカリー', '焼き菓子大人気', '下北沢隣接']
+  },
+  {
+    id: 'vegan-cafe-23',
+    name: 'Universal Bakes Nicome（下北沢）',
+    instagram_id: '@universalbakes_nicome',
+    instagram_url: 'https://www.instagram.com/universalbakes_nicome',
+    genre: 'カフェ',
+    area: '世田谷区北沢',
+    prefecture: '東京都',
+    profile_text: '下北沢BONUS TRACK近くのヴィーガン専門ベイクショップ＆カフェ。ドーナツやアイスが人気。',
+    features: ['下北沢', 'ヴィーガンベイク', 'ドーナツ', '若者・外国人客多数']
+  },
+  {
+    id: 'vegan-cafe-24',
+    name: 'Hal Okada Vegan Sweets Lab（広尾）',
+    instagram_id: '@halokada_vegansweetslab',
+    instagram_url: 'https://www.instagram.com/halokada_vegansweetslab',
+    genre: 'カフェ',
+    area: '渋谷区広尾',
+    prefecture: '東京都',
+    profile_text: 'パティシエ岡田春生氏の100%ヴィーガンパティスリー。極上のショートケーキやロールケーキ。',
+    features: ['広尾一等地', '岡田パティシエ', '100%ヴィーガン', '最高峰スイーツ']
+  },
+  {
+    id: 'vegan-cafe-25',
+    name: 'PQ\'s（浅草・ヴィーガンスパイス＆スイーツ）',
+    instagram_id: '@pqs_curry',
+    instagram_url: 'https://www.instagram.com/pqs_curry',
+    genre: 'カフェ',
+    area: '台東区鳥越',
+    prefecture: '東京都',
+    profile_text: 'アートのような色鮮やかなヴィーガンスイーツとスパイスカレーが人気のお洒落カフェ。',
+    features: ['浅草・鳥越', 'アートヴィーガンスイーツ', 'スパイスカレー', '映えカフェ']
+  },
+  {
+    id: 'vegan-cafe-26',
+    name: 'The Farm Cafe（浅草・隅田川沿い）',
+    instagram_id: '@thefarmcafe',
+    instagram_url: 'https://www.instagram.com/thefarmcafe',
+    genre: 'カフェ',
+    area: '台東区花川戸',
+    prefecture: '東京都',
+    profile_text: '隅田川を望むテラス付き100%ヴィーガンカフェ。インバウンド旅行客で常に満席。',
+    features: ['浅草リバーサイド', '100%ヴィーガン', 'テラス席', 'インバウンド大人気']
+  },
+  {
+    id: 'vegan-cafe-27',
+    name: 'Alaska Zwei（中目黒）',
+    instagram_id: '@alaska_zwei',
+    instagram_url: 'https://www.instagram.com/alaska_zwei',
+    genre: 'カフェ',
+    area: '目黒区東山',
+    prefecture: '東京都',
+    profile_text: '100%植物性の焼き菓子、スコーン、自家製パンとスープのカフェ。',
+    features: ['中目黒', '100%植物性ベイク', 'スコーン', '居心地抜群']
+  },
+  {
+    id: 'vegan-cafe-28',
+    name: 'Te cor gentil（麻布十番）',
+    instagram_id: '@te_cor_gentil',
+    instagram_url: 'https://www.instagram.com/te_cor_gentil',
+    genre: 'カフェ',
+    area: '港区麻布十番',
+    prefecture: '東京都',
+    profile_text: 'フランス仕込みの高級ヴィーガンベーカリー＆カフェ。クロワッサンやデニッシュ。',
+    features: ['麻布十番', '高級ヴィーガンベーカリー', 'クロワッサン', '手土産需要◎']
+  },
+  {
+    id: 'vegan-cafe-29',
+    name: 'HealthyTokyo Cafe & Shop 羽田空港',
+    instagram_id: '@healthytokyo',
+    instagram_url: 'https://www.instagram.com/healthytokyo',
+    genre: 'カフェ',
+    area: '大田区羽田空港',
+    prefecture: '東京都',
+    profile_text: '日本初の空港内ヴィーガンカフェ。外国人旅行者に大人気のヴィーガンチーズケーキやクッキー。',
+    features: ['羽田空港第2ターミナル', '空港内ヴィーガン', 'チーズケーキ', '訪日客殺到']
+  },
+  {
+    id: 'vegan-cafe-30',
+    name: 'HealthyTokyo Cafe & Shop 代官山',
+    instagram_id: '@healthytokyo_daikanyama',
+    instagram_url: 'https://www.instagram.com/healthytokyo_daikanyama',
+    genre: 'カフェ',
+    area: '渋谷区代官山町',
+    prefecture: '東京都',
+    profile_text: '100%プラントベースのCBD＆オーガニックヴィーガンスイーツカフェ。',
+    features: ['代官山', '100%プラントベース', 'CBDスイーツ', 'オーガニック']
+  },
+  {
+    id: 'vegan-cafe-31',
+    name: 'Tokyo Juice 表参道店',
+    instagram_id: '@tokyojuice',
+    instagram_url: 'https://www.instagram.com/tokyojuice',
+    genre: 'カフェ',
+    area: '渋谷区神宮前',
+    prefecture: '東京都',
+    profile_text: 'コールドプレスジュースとヴィーガンアサイーボウル専門店。海外セレブやモデル多数。',
+    features: ['表参道', 'コールドプレスジュース', 'アサイーボウル', '外国人セレブ御用達']
+  },
+  {
+    id: 'vegan-cafe-32',
+    name: 'cafe letter（福岡糟屋郡久山町・Nayuta内）',
+    instagram_id: '@cafe_letter_nayuta',
+    instagram_url: 'https://www.instagram.com/cafe_letter_nayuta',
+    genre: 'カフェ',
+    area: '糟屋郡久山町久原',
+    prefecture: '福岡県',
+    profile_text: '久山町の広大な自然複合施設Nayutaの中で楽しむ極上ヴィーガンスイーツカフェ。',
+    features: ['福岡久山Nayuta', '自然リゾート', 'ヴィーガンスイーツ', 'ドライブ名所']
+  },
+  {
+    id: 'vegan-cafe-33',
+    name: 'チャイナカフェ（福岡今泉）',
+    instagram_id: '@chinacafe_fukuoka',
+    instagram_url: 'https://www.instagram.com/chinacafe_fukuoka',
+    genre: 'カフェ',
+    area: '福岡市中央区今泉',
+    prefecture: '福岡県',
+    profile_text: '中国茶とヴィーガン薬膳スイーツ、豆花が人気のレトロモダンカフェ。大豆アイスとの親和性抜群。',
+    features: ['福岡今泉', '薬膳スイーツ', '豆花', '女性客に大人気']
+  },
+  {
+    id: 'vegan-cafe-34',
+    name: '田田田堂 tatata-do（神戸御影）',
+    instagram_id: '@tatatado_kobe',
+    instagram_url: 'https://www.instagram.com/tatatado_kobe',
+    genre: 'カフェ',
+    area: '神戸市東灘区御影',
+    prefecture: '兵庫県',
+    profile_text: '乳・卵・小麦不使用のお米と豆のプラントベーススイーツ＆パティスリー。',
+    features: ['神戸御影', 'お米のプラントベース', 'グルテンフリー', 'ハイセンスパティスリー']
+  },
+  {
+    id: 'vegan-cafe-35',
+    name: 'greenery（神戸北野町）',
+    instagram_id: '@greenery_kobe',
+    instagram_url: 'https://www.instagram.com/greenery_kobe',
+    genre: 'カフェ',
+    area: '神戸市中央区北野町',
+    prefecture: '兵庫県',
+    profile_text: '北野異人館街の100%プラントベースカフェ。スムージーボウルやスコーンが話題。',
+    features: ['神戸北野異人館', '100%プラントベース', 'スムージーボウル', '外国人観光客多数']
+  },
+  {
+    id: 'vegan-cafe-36',
+    name: 'Modernark pharm cafe（神戸元町）',
+    instagram_id: '@modernark_pharm_cafe',
+    instagram_url: 'https://www.instagram.com/modernark_pharm_cafe',
+    genre: 'カフェ',
+    area: '神戸市中央区北長狭通',
+    prefecture: '兵庫県',
+    profile_text: '神戸トアロード近くで30年以上愛されるオーガニック＆ヴィーガンカフェの草分け。',
+    features: ['神戸元町・トアロード', '30年の歴史', 'オーガニックケーキ', 'ヴィーガン名店']
+  },
+  {
+    id: 'vegan-cafe-37',
+    name: 'Yidaki Cafe（神戸元町）',
+    instagram_id: '@yidakicafe',
+    instagram_url: 'https://www.instagram.com/yidakicafe',
+    genre: 'カフェ',
+    area: '神戸市中央区三宮町',
+    prefecture: '兵庫県',
+    profile_text: 'オーストラリア仕込みのヴィーガン＆ヘルシーカフェ。身体に優しいヴィーガンボウルとスイーツ。',
+    features: ['神戸元町', 'オーストラリアスタイル', 'ヴィーガンスイーツ', 'リラックス空間']
+  },
+  {
+    id: 'vegan-cafe-38',
+    name: 'TOSCA（京都北白川）',
+    instagram_id: '@tosca_kyoto',
+    instagram_url: 'https://www.instagram.com/tosca_kyoto',
+    genre: 'カフェ',
+    area: '京都市左京区北白川',
+    prefecture: '京都府',
+    profile_text: '京都大学・銀閣寺近くの自然食・ヴィーガンオーガニックカフェ。自家製マフィンやケーキ。',
+    features: ['京都北白川', '銀閣寺近く', '自然食オーガニック', 'マフィン＆ケーキ']
+  },
+  {
+    id: 'vegan-cafe-39',
+    name: 'Organic Vegan Cafe morpho（京都堀川今出川）',
+    instagram_id: '@cafe_morpho',
+    instagram_url: 'https://www.instagram.com/cafe_morpho',
+    genre: 'カフェ',
+    area: '京都市上京区西町',
+    prefecture: '京都府',
+    profile_text: '100%ヴィーガンの老舗カフェ。ヴィーガンパフェやケーキ、豆乳スイーツが豊富。',
+    features: ['京都堀川今出川', '100%ヴィーガン', 'パフェ＆サンデー', '老舗の名店']
+  },
+  {
+    id: 'vegan-cafe-40',
+    name: 'Premmarché Gelateria（京都三条会商店街）',
+    instagram_id: '@premarche_gelateria',
+    instagram_url: 'https://www.instagram.com/premarche_gelateria',
+    genre: 'カフェ',
+    area: '京都市中京区三条通',
+    prefecture: '京都府',
+    profile_text: 'イタリア国際ジェラート大会受賞の100%ヴィーガンジェラート専門店。',
+    features: ['京都三条会商店街', 'イタリア国際受賞', '100%ヴィーガンジェラート', 'インバウンド行列']
+  },
+  {
+    id: 'vegan-cafe-41',
+    name: 'cafe planet（京都出町柳）',
+    instagram_id: '@cafe_planet_kyoto',
+    instagram_url: 'https://www.instagram.com/cafe_planet_kyoto',
+    genre: 'カフェ',
+    area: '京都市上京区出町柳',
+    prefecture: '京都府',
+    profile_text: '鴨川近くのプラントベースカフェ。豆乳ソフトやロースイーツが評判。',
+    features: ['京都出町柳・鴨川', 'プラントベース', '豆乳ソフト', 'ロースイーツ']
+  },
+  {
+    id: 'vegan-cafe-42',
+    name: 'the kind CAFE（京都清水五条）',
+    instagram_id: '@thekindcafe_kyoto',
+    instagram_url: 'https://www.instagram.com/thekindcafe_kyoto',
+    genre: 'カフェ',
+    area: '京都市東山区清水',
+    prefecture: '京都府',
+    profile_text: '清水寺近くのスタイリッシュなヴィーガンスイーツカフェ。フルーツタルトやスムージー。',
+    features: ['京都清水寺近く', 'スタイリッシュ空間', 'ヴィーガンスイーツ', '若者・外国人客']
+  },
+  {
+    id: 'vegan-cafe-43',
+    name: 'Veg Out（京都七条 鴨川沿い）',
+    instagram_id: '@vegout_kyoto',
+    instagram_url: 'https://www.instagram.com/vegout_kyoto',
+    genre: 'カフェ',
+    area: '京都市下京区七条通',
+    prefecture: '京都府',
+    profile_text: '鴨川を望むテラスが絶景の100%ヴィーガンカフェ。アイスやパフェ、マフィンが充実。',
+    features: ['鴨川絶景ビュー', '100%ヴィーガン', 'パフェ＆スイーツ', '海外トラベラー多数']
+  },
+  {
+    id: 'vegan-cafe-44',
+    name: 'OPTIMAL CAFE（大阪南森町）',
+    instagram_id: '@optimalcafe',
+    instagram_url: 'https://www.instagram.com/optimalcafe',
+    genre: 'カフェ',
+    area: '大阪市北区南森町',
+    prefecture: '大阪府',
+    profile_text: '薬膳とヴィーガンスイーツを融合させたヘルシーカフェ。大豆アイスとの親和性◎。',
+    features: ['大阪南森町', '薬膳ヴィーガン', 'ヘルシースイーツ', '身体に優しい']
+  },
+  {
+    id: 'vegan-cafe-45',
+    name: 'Megumi Cafe（大阪阿倍野天王寺）',
+    instagram_id: '@megumi_cafe_vegan',
+    instagram_url: 'https://www.instagram.com/megumi_cafe_vegan',
+    genre: 'カフェ',
+    area: '大阪市阿倍野区松崎町',
+    prefecture: '大阪府',
+    profile_text: '100%植物性の玄米と旬野菜ランチ＆ヴィーガンスイーツ。',
+    features: ['大阪阿倍野・天王寺', '玄米菜食', '植物性100%', '手作りケーキ']
+  },
+  {
+    id: 'vegan-cafe-46',
+    name: 'Bio Terrace（名古屋栄）',
+    instagram_id: '@bioterrace_nagoya',
+    instagram_url: 'https://www.instagram.com/bioterrace_nagoya',
+    genre: 'カフェ',
+    area: '名古屋市中区栄',
+    prefecture: '愛知県',
+    profile_text: '名古屋屈指のヴィーガンカフェ。ロースイーツやハーブティー、スーパーフード。',
+    features: ['名古屋栄中心地', 'ロースイーツ', 'スーパーフード', 'ヘルシービューティー']
+  },
+  {
+    id: 'vegan-cafe-47',
+    name: '穀菜カフェ ソラフネ（鎌倉大町）',
+    instagram_id: '@sorafune_kamakura',
+    instagram_url: 'https://www.instagram.com/sorafune_kamakura',
+    genre: 'カフェ',
+    area: '鎌倉市大町',
+    prefecture: '神奈川県',
+    profile_text: '築100年の古民家で楽しむマクロビオティック＆ヴィーガンスイーツ。',
+    features: ['鎌倉古民家', 'マクロビオティック', '玄米スイーツ', '観光名所']
+  },
+  {
+    id: 'vegan-cafe-48',
+    name: '自然食＆ローフード LOHAS（札幌大通）',
+    instagram_id: '@lohas_sapporo',
+    instagram_url: 'https://www.instagram.com/lohas_sapporo',
+    genre: 'カフェ',
+    area: '札幌市中央区南2条',
+    prefecture: '北海道',
+    profile_text: '札幌の老舗ヴィーガン＆ローフードカフェ。酵素スイーツや豆乳デザート。',
+    features: ['札幌大通公園近く', 'ローフード', '酵素スイーツ', '老舗自然食']
+  },
+  {
+    id: 'vegan-cafe-49',
+    name: 'Cafe178ミヤノサワ（札幌西区）',
+    instagram_id: '@cafe178miyanosawa',
+    instagram_url: 'https://www.instagram.com/cafe178miyanosawa',
+    genre: 'カフェ',
+    area: '札幌市西区宮の沢',
+    prefecture: '北海道',
+    profile_text: '自然栽培米と有機野菜のヴィーガンスイーツ隠れ家カフェ。',
+    features: ['札幌宮の沢', '自然栽培', 'ヴィーガンスイーツ', '隠れ家カフェ']
+  },
+  {
+    id: 'vegan-cafe-50',
+    name: 'Big Apple（広島宮島口）',
+    instagram_id: '@bigapple_miyajima',
+    instagram_url: 'https://www.instagram.com/bigapple_miyajima',
+    genre: 'カフェ',
+    area: '廿日市市宮島口',
+    prefecture: '広島県',
+    profile_text: '世界遺産・宮島フェリー乗り場近くのヴィーガンカフェ＆ベイク。',
+    features: ['広島宮島口', '世界遺産観光客', 'ヴィーガンベイク', '外国人人気']
+  },
+  {
+    id: 'vegan-cafe-51',
+    name: '暮らしの発酵DELI&CAFE（沖縄北中城村）',
+    instagram_id: '@kurashinohakko_deli',
+    instagram_url: 'https://www.instagram.com/kurashinohakko_deli',
+    genre: 'カフェ',
+    area: '中頭郡北中城村喜舎場',
+    prefecture: '沖縄県',
+    profile_text: 'EMウェルネス暮らしの発酵リゾート内のヴィーガンデリ＆カフェ。スイーツ充実。',
+    features: ['沖縄ウェルネスホテル内', '発酵スイーツ', 'ヴィーガンデリ', 'オーガニック']
+  },
+  {
+    id: 'vegan-cafe-52',
+    name: 'カフェこくう（沖縄今帰仁村）',
+    instagram_id: '@cafe_cokuu',
+    instagram_url: 'https://www.instagram.com/cafe_cokuu',
+    genre: 'カフェ',
+    area: '国頭郡今帰仁村諸志',
+    prefecture: '沖縄県',
+    profile_text: 'やんばるの絶景と無農薬野菜のヴィーガンランチ＆デザートプレート。',
+    features: ['沖縄今帰仁', 'やんばる絶景ビュー', '無農薬野菜スイーツ', '人気スポット']
+  },
+  {
+    id: 'vegan-cafe-53',
+    name: 'Cafe すみれ（沖縄石垣島）',
+    instagram_id: '@cafe_sumire_ishigaki',
+    instagram_url: 'https://www.instagram.com/cafe_sumire_ishigaki',
+    genre: 'カフェ',
+    area: '石垣市登野城',
+    prefecture: '沖縄県',
+    profile_text: '石垣島の自然素材を使った100%ヴィーガンカフェ。島フルーツのスイーツやアイス。',
+    features: ['沖縄石垣島', '100%ヴィーガン', '島フルーツスイーツ', 'リゾート観光客']
+  },
+  {
+    id: 'vegan-cafe-54',
+    name: 'CAFE slow（東京国分寺）',
+    instagram_id: '@cafeslow_tokyo',
+    instagram_url: 'https://www.instagram.com/cafeslow_tokyo',
+    genre: 'カフェ',
+    area: '国分寺市東元町',
+    prefecture: '東京都',
+    profile_text: 'オーガニック＆スローフードの伝説的ヴィーガンカフェ。自然派アイスやスイーツ。',
+    features: ['東京国分寺', 'スローフードの聖地', 'オーガニックスイーツ', '広いコミュニティ']
+  },
+  {
+    id: 'vegan-cafe-55',
+    name: '菓子工房 菓と果（福岡平尾）',
+    instagram_id: '@kato_ka',
+    instagram_url: 'https://www.instagram.com/kato_ka',
+    genre: 'カフェ',
+    area: '福岡市中央区平尾',
+    prefecture: '福岡県',
+    profile_text: '卵・乳製品・白砂糖不使用のプラントベース焼き菓子＆スイーツ専門店。',
+    features: ['福岡平尾', '卵乳製品不使用', 'プラントベース焼菓子', '地元ファン多数']
+  },
   // ============================================================
-  // 🍛 カレー＆スパイス（10店舗）
+  // 🍛 カレー＆スパイス（25店舗）
   // ============================================================
   {
     id: 'vegan-curry-01',
@@ -941,23 +1565,187 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
     profile_text: '那覇の島野菜を使ったスパイスカレー店。完全植物性のヴィーガンカレーを提供し南国らしい食後スイーツが好評。',
     features: ['那覇市内', '島野菜ヴィーガン', '南国スイーツ好相性']
   },
-
-  // ============================================================
-  // 🍽️ レストラン＆ダイニング（10店舗）
-  // ============================================================
   {
-    id: 'vegan-rest-01',
-    name: '菜道（SAIDO 自由が丘）',
-    instagram_id: '@saido_tokyo',
-    instagram_url: 'https://www.instagram.com/saido_tokyo',
-    genre: 'レストラン',
-    area: '目黒区自由が丘',
-    prefecture: '東京都',
-    profile_text: '世界一のヴィーガンレストランに輝いた和食ダイニング。精進の精神に基づき鰻重風やカツ丼風を完全植物性で再現。',
-    features: ['世界一選出', 'ヴィーガン和食', '外国人富裕層御用達']
+    id: 'vegan-curry-11',
+    name: 'Dharmasagara 久留米（本格南インド料理）',
+    instagram_id: '@dharmasagara_kurume',
+    instagram_url: 'https://www.instagram.com/dharmasagara_kurume',
+    genre: 'カレー',
+    area: '久留米市日吉町',
+    prefecture: '福岡県',
+    profile_text: '東日本橋から久留米に移転した伝説の南インド料理。ベジタリアン・ヴィーガン完全対応。',
+    features: ['久留米名店', '伝説の南インド料理', '完全ヴィーガン対応', '全国からファン殺到']
   },
   {
-    id: 'vegan-rest-02',
+    id: 'vegan-curry-12',
+    name: '菜食インドレストラン Shama（大阪四ツ橋）',
+    instagram_id: '@shama_vegan',
+    instagram_url: 'https://www.instagram.com/shama_vegan',
+    genre: 'カレー',
+    area: '大阪市西区北堀江',
+    prefecture: '大阪府',
+    profile_text: '全メニュー五葷抜き・ヴィーガン対応の本格菜食インド料理。ダールカレーやサモサ。',
+    features: ['大阪四ツ橋', '五葷抜き対応', 'ヴィーガンインド料理', '本格スパイス']
+  },
+  {
+    id: 'vegan-curry-13',
+    name: '養生カレー（熊本市）',
+    instagram_id: '@yojocurry',
+    instagram_url: 'https://www.instagram.com/yojocurry',
+    genre: 'カレー',
+    area: '熊本市中央区新市街',
+    prefecture: '熊本県',
+    profile_text: '漢方生薬とスパイスを調合したヴィーガン対応カレープレート。健康志向客が殺到。',
+    features: ['熊本市中心地', '漢方生薬スパイス', 'ヴィーガンプレート', '行列店']
+  },
+  {
+    id: 'vegan-curry-14',
+    name: 'CBD green（岡山市）',
+    instagram_id: '@cbdgreen_okayama',
+    instagram_url: 'https://www.instagram.com/cbdgreen_okayama',
+    genre: 'カレー',
+    area: '岡山市北区問屋町',
+    prefecture: '岡山県',
+    profile_text: '無農薬玄米のヴィーガンスパイスカレーやプラントベーススイーツ。',
+    features: ['岡山市中心地', '無農薬玄米カレー', 'プラントベース', 'リラックスカフェ']
+  },
+  {
+    id: 'vegan-curry-15',
+    name: '酔彩（広島市中区）',
+    instagram_id: '@suisai_spice',
+    instagram_url: 'https://www.instagram.com/suisai_spice',
+    genre: 'カレー',
+    area: '広島市中区十日市町',
+    prefecture: '広島県',
+    profile_text: '地元有機野菜とオーガニックスパイスで作るヴィーガンカレー。',
+    features: ['広島市中区', '有機野菜スパイスカレー', 'ヴィーガン対応', 'スパイスマニア支持']
+  },
+  {
+    id: 'vegan-curry-16',
+    name: 'Peace Cafe Tokyo（渋谷スクランブルスクエア）',
+    instagram_id: '@peacecafetokyo',
+    instagram_url: 'https://www.instagram.com/peacecafetokyo',
+    genre: 'カレー',
+    area: '渋谷区渋谷',
+    prefecture: '東京都',
+    profile_text: 'ハワイ発のヴィーガンカレー＆デリ専門店。ハワイアンヴィーガンカレーが看板。',
+    features: ['渋谷スクランブルスクエア', 'ハワイ発有名店', 'ヴィーガンカレー', '女性客多数']
+  },
+  {
+    id: 'vegan-curry-17',
+    name: 'カリーライス専門店 エチオピア（神保町）',
+    instagram_id: '@ethiopia_curry',
+    instagram_url: 'https://www.instagram.com/ethiopia_curry',
+    genre: 'カレー',
+    area: '千代田区神田小川町',
+    prefecture: '東京都',
+    profile_text: 'カレーの聖地神保町の老舗。野菜カリーは植物性100%仕込みでベジタリアンに愛される。',
+    features: ['神保町カレー聖地', '老舗名店', '野菜カリー植物性100%', 'スパイス濃厚']
+  },
+  {
+    id: 'vegan-curry-18',
+    name: 'ナタラジ 渋谷店（自然派インド料理）',
+    instagram_id: '@nataraj_shibuya',
+    instagram_url: 'https://www.instagram.com/nataraj_shibuya',
+    genre: 'カレー',
+    area: '渋谷区神南',
+    prefecture: '東京都',
+    profile_text: '自社農場直送の無農薬野菜と大豆ミートを使った日本初の自然派菜食インドカレー。',
+    features: ['渋谷一等地', '日本初の菜食インド料理', '無農薬野菜', '大豆ミートカレー']
+  },
+  {
+    id: 'vegan-curry-19',
+    name: 'ナタラジ 銀座店',
+    instagram_id: '@nataraj_ginza',
+    instagram_url: 'https://www.instagram.com/nataraj_ginza',
+    genre: 'カレー',
+    area: '中央区銀座',
+    prefecture: '東京都',
+    profile_text: '銀座一等地の完全菜食インドレストラン。海外要人やヴィーガン旅行者に定番。',
+    features: ['銀座一等地', '完全菜食レストラン', 'インバウンド定番', '上質空間']
+  },
+  {
+    id: 'vegan-curry-20',
+    name: 'ムルギー（渋谷円山町）',
+    instagram_id: '@murugi_shibuya',
+    instagram_url: 'https://www.instagram.com/murugi_shibuya',
+    genre: 'カレー',
+    area: '渋谷区道玄坂',
+    prefecture: '東京都',
+    profile_text: '昭和26年創業の伝説のカレー店。玉ねぎとスパイスの深いコク。',
+    features: ['渋谷道玄坂', '昭和26年創業', '山型ライス', '歴史的名店']
+  },
+  {
+    id: 'vegan-curry-21',
+    name: 'カルダモン（大阪天六）',
+    instagram_id: '@cardamom_tenroku',
+    instagram_url: 'https://www.instagram.com/cardamom_tenroku',
+    genre: 'カレー',
+    area: '大阪市北区天神橋筋六丁目',
+    prefecture: '大阪府',
+    profile_text: 'スパイスマニア絶賛のベジタブルカレー。食後アイスとの相性抜群。',
+    features: ['大阪天神橋筋六丁目', 'ベジタブルカレー', 'スパイス名店', 'デザート好相性']
+  },
+  {
+    id: 'vegan-curry-22',
+    name: 'スパイスチャンバー（京都四条烏丸）',
+    instagram_id: '@spicechamber_kyoto',
+    instagram_url: 'https://www.instagram.com/spicechamber_kyoto',
+    genre: 'カレー',
+    area: '京都市下京区室町通',
+    prefecture: '京都府',
+    profile_text: '京都のスパイスカレーの草分け。野菜と豆の濃厚スパイシーカレー。',
+    features: ['京都四条烏丸', '京都スパイスカレー草分け', '濃厚スパイス', 'コアファン多数']
+  },
+  {
+    id: 'vegan-curry-23',
+    name: 'カリーシ（原宿・神宮前）',
+    instagram_id: '@currysh_harajuku',
+    instagram_url: 'https://www.instagram.com/currysh_harajuku',
+    genre: 'カレー',
+    area: '渋谷区神宮前',
+    prefecture: '東京都',
+    profile_text: '小麦粉・化学調味料不使用のヴィーガン対応スパイスカレー。',
+    features: ['原宿神宮前', 'グルテンフリーカレー', '無化学調味料', '若者・クリエイター人気']
+  },
+  {
+    id: 'vegan-curry-24',
+    name: 'ポタジエ（沖縄那覇）',
+    instagram_id: '@potager_okinawa',
+    instagram_url: 'https://www.instagram.com/potager_okinawa',
+    genre: 'カレー',
+    area: '那覇市泊',
+    prefecture: '沖縄県',
+    profile_text: '沖縄島野菜とスパイスのヴィーガンカレー専門店。食後のさっぱりアイスが好相性。',
+    features: ['沖縄那覇', '島野菜ヴィーガンカレー', '無添加', 'ヘルシーランチ']
+  },
+  {
+    id: 'vegan-curry-25',
+    name: 'カフェ ハルディ（長野軽井沢）',
+    instagram_id: '@cafe_haldi_karuizawa',
+    instagram_url: 'https://www.instagram.com/cafe_haldi_karuizawa',
+    genre: 'カレー',
+    area: '北佐久郡軽井沢町長倉',
+    prefecture: '長野県',
+    profile_text: '軽井沢の別荘族に愛されるヴィーガンフレンドリーなスパイスカレー＆ハーブティーカフェ。',
+    features: ['軽井沢別荘地', 'スパイスカレー', 'ヴィーガン対応', '避暑地リゾート']
+  },
+  // ============================================================
+  // 🍽️ レストラン＆ダイニング（30店舗）
+  // ============================================================
+  {
+    id: 'vegan-restaurant-01',
+    name: 'チャヤマクロビ ロイヤルパークホテル アイコニック汐留',
+    instagram_id: '@chayamacrobi',
+    instagram_url: 'https://www.instagram.com/chayamacrobi',
+    genre: 'レストラン',
+    area: '港区東新橋',
+    prefecture: '東京都',
+    profile_text: '汐留のラグジュアリーホテル内にあるマクロビオティックの名門。完全植物性のコース料理や極上スイーツ。',
+    features: ['ホテル内名店', 'マクロビオティック', '汐留一等地', '植物性コース']
+  },
+  {
+    id: 'vegan-restaurant-02',
     name: 'チャヤマクロビ ロイヤルパークホテル汐留',
     instagram_id: '@chayamacrobietics',
     instagram_url: 'https://www.instagram.com/chayamacrobietics',
@@ -968,7 +1756,7 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
     features: ['ホテル内優雅空間', 'マクロビオティック名門', 'コースデザート']
   },
   {
-    id: 'vegan-rest-03',
+    id: 'vegan-restaurant-03',
     name: 'ブラウンライス（BROWN RICE 表参道）',
     instagram_id: '@brownrice_tokyo',
     instagram_url: 'https://www.instagram.com/brownrice_tokyo',
@@ -979,7 +1767,7 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
     features: ['表参道ニールズヤード', '玄米・伝統発酵', '洗練された和食']
   },
   {
-    id: 'vegan-rest-04',
+    id: 'vegan-restaurant-04',
     name: '泉仙（いづせん 京都大徳寺）',
     instagram_id: '@izusen_kyoto',
     instagram_url: 'https://www.instagram.com/izusen_kyoto',
@@ -990,7 +1778,7 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
     features: ['伝統精進料理', '京都大徳寺門前', '鉄鉢料理']
   },
   {
-    id: 'vegan-rest-05',
+    id: 'vegan-restaurant-05',
     name: '料理旅館 白梅（祇園）',
     instagram_id: '@shiraume_kyoto',
     instagram_url: 'https://www.instagram.com/shiraume_kyoto',
@@ -1001,18 +1789,18 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
     features: ['祇園白川', 'ヴィーガン京懐石', '最高峰のおもてなし']
   },
   {
-    id: 'vegan-rest-06',
-    name: 'パプリカ食堂 Vegan 大阪本店',
-    instagram_id: '@papurika_vegan',
-    instagram_url: 'https://www.instagram.com/papurika_vegan',
+    id: 'vegan-restaurant-06',
+    name: 'Green Earth（グリーンアース 大阪本町）',
+    instagram_id: '@green_earth_osaka',
+    instagram_url: 'https://www.instagram.com/green_earth_osaka',
     genre: 'レストラン',
-    area: '大阪市西区新町',
+    area: '大阪市中央区北久宝寺町',
     prefecture: '大阪府',
-    profile_text: '「お肉・お魚・卵・乳製品・白砂糖・化学調味料を一切使いません」を掲げる大阪ヴィーガンのシンボルレストラン。',
-    features: ['大阪ヴィーガン旗艦店', '無農薬野菜・無化調', 'スイーツ充実']
+    profile_text: '1991年創業、大阪で最も歴史のあるヴィーガンレストラン。手作りの植物性洋食やデザートが欧米客に大評判。',
+    features: ['1991年創業', '大阪老舗名店', '本町ビジネス街', '欧米客常連']
   },
   {
-    id: 'vegan-rest-07',
+    id: 'vegan-restaurant-07',
     name: 'オーガニックレストラン びお亭',
     instagram_id: '@biotei_osaka',
     instagram_url: 'https://www.instagram.com/biotei_osaka',
@@ -1023,7 +1811,7 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
     features: ['大阪北浜', '老舗オーガニック', '玄米・無農薬']
   },
   {
-    id: 'vegan-rest-08',
+    id: 'vegan-restaurant-08',
     name: '松竹園 Shouchikuen',
     instagram_id: '@shouchikuen',
     instagram_url: 'https://www.instagram.com/shouchikuen',
@@ -1034,7 +1822,7 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
     features: ['浅草雷門近く', 'ヴィーガン中華・素食', '点心・デザート']
   },
   {
-    id: 'vegan-rest-09',
+    id: 'vegan-restaurant-09',
     name: '自然食レストラン グレイス',
     instagram_id: '@grace_sapporo',
     instagram_url: 'https://www.instagram.com/grace_sapporo',
@@ -1045,7 +1833,7 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
     features: ['札幌自然食', '北海道有機野菜', 'フレンチ風ヴィーガン']
   },
   {
-    id: 'vegan-rest-10',
+    id: 'vegan-restaurant-10',
     name: '喜楽楽（きらら）読谷村',
     instagram_id: '@kirara_okinawa',
     instagram_url: 'https://www.instagram.com/kirara_okinawa',
@@ -1055,9 +1843,228 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
     profile_text: '沖縄読谷村の薬膳＆マクロビオティック自然食レストラン。長寿の島沖縄の伝統ハーブと植物性料理。',
     features: ['沖縄伝統ハーブ', '薬膳マクロビ', '島野菜フル活用']
   },
-
+  {
+    id: 'vegan-restaurant-11',
+    name: 'カジュアルレストラン Sui（福岡久山・Nayuta内）',
+    instagram_id: '@sui_nayuta',
+    instagram_url: 'https://www.instagram.com/sui_nayuta',
+    genre: 'レストラン',
+    area: '糟屋郡久山町久原',
+    prefecture: '福岡県',
+    profile_text: '地元の旬の自然栽培野菜を活かした100%ヴィーガンのイタリアンダイニング。',
+    features: ['福岡久山Nayuta', '100%ヴィーガンイタリアン', '自然栽培野菜', '絶景ロケーション']
+  },
+  {
+    id: 'vegan-restaurant-12',
+    name: 'ヴィーガン居酒屋 真さか（京都烏丸）',
+    instagram_id: '@masaka_vegan',
+    instagram_url: 'https://www.instagram.com/masaka_vegan',
+    genre: 'レストラン',
+    area: '京都市中京区烏丸',
+    prefecture: '京都府',
+    profile_text: '京町家で大豆ミートのから揚げや餃子、ヴィーガン酒場メニューを展開。インバウンド殺到。',
+    features: ['京都烏丸・京町家', 'ヴィーガン居酒屋', '大豆ミート唐揚げ', '外国人行列店']
+  },
+  {
+    id: 'vegan-restaurant-13',
+    name: 'Gira&L Vegan Restaurant（京都祇園四条）',
+    instagram_id: '@gira_and_l_vegan',
+    instagram_url: 'https://www.instagram.com/gira_and_l_vegan',
+    genre: 'レストラン',
+    area: '京都市東山区祇園町',
+    prefecture: '京都府',
+    profile_text: '祇園の町家で全国の有機野菜を使った上質ヴィーガンコース。',
+    features: ['京都祇園一等地', '高級ヴィーガンコース', '京町家', '富裕層・海外旅行客']
+  },
+  {
+    id: 'vegan-restaurant-14',
+    name: 'リトルヘブン LITTLE-HEAVEN（京都太秦）',
+    instagram_id: '@littleheaven_kyoto',
+    instagram_url: 'https://www.instagram.com/littleheaven_kyoto',
+    genre: 'レストラン',
+    area: '京都市右京区太秦',
+    prefecture: '京都府',
+    profile_text: '植物性食材100%の京懐石・ヴィーガン創作コース（要予約）。',
+    features: ['京都太秦', '100%植物性京懐石', '完全予約制', '極上の職人技']
+  },
+  {
+    id: 'vegan-restaurant-15',
+    name: 'Vege Kitchen KelaKela（大阪梅田）',
+    instagram_id: '@kelakela_umeda',
+    instagram_url: 'https://www.instagram.com/kelakela_umeda',
+    genre: 'レストラン',
+    area: '大阪市北区中崎西',
+    prefecture: '大阪府',
+    profile_text: '阪急梅田・中崎町の無添加オーガニックヴィーガンダイニング。',
+    features: ['大阪梅田・中崎町', '無添加オーガニック', 'ヴィーガンプレート', '女子会人気']
+  },
+  {
+    id: 'vegan-restaurant-16',
+    name: 'Loving Hut（東京神田神保町）',
+    instagram_id: '@lovinghut.jp',
+    instagram_url: 'https://www.instagram.com/lovinghut.jp',
+    genre: 'レストラン',
+    area: '千代田区神田神保町',
+    prefecture: '東京都',
+    profile_text: '世界展開する100%ヴィーガンレストラン。点心やコース料理が充実。',
+    features: ['神田神保町', '世界標準ヴィーガン', '菜食点心', '海外ビジター多数']
+  },
+  {
+    id: 'vegan-restaurant-17',
+    name: '2foods 渋谷ロフト店',
+    instagram_id: '@2foods.jp',
+    instagram_url: 'https://www.instagram.com/2foods.jp',
+    genre: 'レストラン',
+    area: '渋谷区宇田川町',
+    prefecture: '東京都',
+    profile_text: '「ヘルシージャンクフード」を掲げる最新プラントベースダイナー。',
+    features: ['渋谷ロフト内', 'ヘルシージャンクフード', '話題のプラントベース', 'トレンド発信']
+  },
+  {
+    id: 'vegan-restaurant-18',
+    name: '2foods 銀座ロフト店',
+    instagram_id: '@2foods_ginza',
+    instagram_url: 'https://www.instagram.com/2foods_ginza',
+    genre: 'レストラン',
+    area: '中央区銀座',
+    prefecture: '東京都',
+    profile_text: '食事からデザートまで全て植物性の最新プラントベース旗艦店。',
+    features: ['銀座ロフト内', 'プラントベース旗艦店', 'カフェ＆スイーツ', 'インバウンド多数']
+  },
+  {
+    id: 'vegan-restaurant-19',
+    name: '台湾素食 健福（東京六本木）',
+    instagram_id: '@chienfu_vegan',
+    instagram_url: 'https://www.instagram.com/chienfu_vegan',
+    genre: 'レストラン',
+    area: '港区六本木',
+    prefecture: '東京都',
+    profile_text: '台湾の伝統精進料理をベースにした本格ヴィーガン中華レストラン。',
+    features: ['六本木', '本格台湾素食', 'ヴィーガン中華', '高級精進料理']
+  },
+  {
+    id: 'vegan-restaurant-20',
+    name: 'ピッツェリア・テアトリーノ（広島大崎上島）',
+    instagram_id: '@teatrino_pizza',
+    instagram_url: 'https://www.instagram.com/teatrino_pizza',
+    genre: 'レストラン',
+    area: '豊田郡大崎上島町',
+    prefecture: '広島県',
+    profile_text: '自家製ヴィーガンチーズと島野菜の薪窯ヴィーガンピッツァ。',
+    features: ['広島瀬戸内離島', '薪窯ヴィーガンピッツァ', '自家製植物性チーズ', '島野菜']
+  },
+  {
+    id: 'vegan-restaurant-21',
+    name: '自然派食堂タマテバコ（那覇国際通り）',
+    instagram_id: '@tamatebako_naha',
+    instagram_url: 'https://www.instagram.com/tamatebako_naha',
+    genre: 'レストラン',
+    area: '那覇市松尾',
+    prefecture: '沖縄県',
+    profile_text: '沖縄県産無農薬野菜とプラントベース創作料理のベジ酒場。',
+    features: ['那覇国際通り路地裏', '100%プラントベース酒場', '無農薬島野菜', '多国籍空間']
+  },
+  {
+    id: 'vegan-restaurant-22',
+    name: 'LaLaZorba（那覇市銘苅）',
+    instagram_id: '@lalazorba',
+    instagram_url: 'https://www.instagram.com/lalazorba',
+    genre: 'レストラン',
+    area: '那覇市銘苅',
+    prefecture: '沖縄県',
+    profile_text: '白砂糖・化学調味料一切不使用の本格ヴィーガンエスニックダイニング。',
+    features: ['那覇新都心', '本格ヴィーガンエスニック', '白砂糖化学調味料不使用', '海外客絶賛']
+  },
+  {
+    id: 'vegan-restaurant-23',
+    name: 'ミチルキッチン（札幌大通）',
+    instagram_id: '@michiru_kitchen',
+    instagram_url: 'https://www.instagram.com/michiru_kitchen',
+    genre: 'レストラン',
+    area: '札幌市中央区南3条',
+    prefecture: '北海道',
+    profile_text: '北海道産野菜や豆を主役にした全品ヴィーガンの創作ビストロ。',
+    features: ['札幌大通', '北海道産有機野菜', '全品ヴィーガンビストロ', 'ナチュラルワイン']
+  },
+  {
+    id: 'vegan-restaurant-24',
+    name: '万屋の勝手口（長崎市万屋町）',
+    instagram_id: '@yorozuya_katsuteguchi',
+    instagram_url: 'https://www.instagram.com/yorozuya_katsuteguchi',
+    genre: 'レストラン',
+    area: '長崎市万屋町',
+    prefecture: '長崎県',
+    profile_text: '長崎のオーガニック野菜と自然派調味料のヴィーガン創作料理。',
+    features: ['長崎市中心地', 'オーガニック創作料理', 'ヴィーガンコース', 'こだわり調味料']
+  },
+  {
+    id: 'vegan-restaurant-25',
+    name: '茶房さくらさくら（熊本市水前寺）',
+    instagram_id: '@sakurasakura_kumamoto',
+    instagram_url: 'https://www.instagram.com/sakurasakura_kumamoto',
+    genre: 'レストラン',
+    area: '熊本市中央区水前寺公園',
+    prefecture: '熊本県',
+    profile_text: '熊本城近くの自家製無添加味噌と旬野菜の自然食レストラン。',
+    features: ['熊本水前寺', '無添加自家製味噌', '自然食プレート', '健康志向']
+  },
+  {
+    id: 'vegan-restaurant-26',
+    name: '自然食 レストラン かなで（福岡早良区）',
+    instagram_id: '@kanade_fukuoka',
+    instagram_url: 'https://www.instagram.com/kanade_fukuoka',
+    genre: 'レストラン',
+    area: '福岡市早良区有田',
+    prefecture: '福岡県',
+    profile_text: '福岡の玄米菜食・オーガニック野菜とマクロビオティック。',
+    features: ['福岡市早良区', '玄米菜食', 'マクロビオティック', '地元自然食名店']
+  },
+  {
+    id: 'vegan-restaurant-27',
+    name: '晴る家（鹿児島市城山町）',
+    instagram_id: '@haruya_kagoshima',
+    instagram_url: 'https://www.instagram.com/haruya_kagoshima',
+    genre: 'レストラン',
+    area: '鹿児島市城山町',
+    prefecture: '鹿児島県',
+    profile_text: '奄美の伝統食材と無農薬野菜のヴィーガン創作ダイニング。',
+    features: ['鹿児島城山', '奄美オーガニック', 'ヴィーガン創作料理', '観光客に人気']
+  },
+  {
+    id: 'vegan-restaurant-28',
+    name: '鉢の木（鎌倉北鎌倉）',
+    instagram_id: '@hachinoki_kamakura',
+    instagram_url: 'https://www.instagram.com/hachinoki_kamakura',
+    genre: 'レストラン',
+    area: '鎌倉市山ノ内',
+    prefecture: '神奈川県',
+    profile_text: 'ミシュラン掲載の歴史ある鎌倉精進料理・ヴィーガン会席。',
+    features: ['北鎌倉名所', 'ミシュラン掲載', '伝統精進料理', '完全植物性会席']
+  },
+  {
+    id: 'vegan-restaurant-29',
+    name: '自然食カフェ ル・コントワール（名古屋千種）',
+    instagram_id: '@lecomptoir_nagoya',
+    instagram_url: 'https://www.instagram.com/lecomptoir_nagoya',
+    genre: 'レストラン',
+    area: '名古屋市千種区今池',
+    prefecture: '愛知県',
+    profile_text: '愛知県産有機野菜を贅沢に使用したヴィーガンフレンチビストロ。',
+    features: ['名古屋千種', 'ヴィーガンフレンチ', '愛知産有機野菜', '美食プラントベース']
+  },
+  {
+    id: 'vegan-restaurant-30',
+    name: 'Sajilo Cafe Forest（軽井沢）',
+    instagram_id: '@sajilocafe',
+    instagram_url: 'https://www.instagram.com/sajilocafe',
+    genre: 'レストラン',
+    area: '北佐久郡軽井沢町軽井沢',
+    prefecture: '長野県',
+    profile_text: '旧軽井沢の緑に囲まれたオーガニックスパイス＆ネパール料理レストラン。ヴィーガンコース対応。',
+    features: ['旧軽井沢', '緑豊かな別荘地', 'オーガニックスパイス', 'ヴィーガン対応']
+  },
   // ============================================================
-  // 🏨 ホテル＆ラウンジ（8店舗）
+  // 🏨 ホテル＆リゾート（15店舗）
   // ============================================================
   {
     id: 'vegan-hotel-01',
@@ -1146,6 +2153,83 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
     prefecture: '京都府',
     profile_text: '鴨川のほとりに佇む最高級ラグジュアリーホテル。海外富裕層のヴィーガン・アレルギーリクエストに常時対応。',
     features: ['最高級ラグジュアリー', '鴨川畔', '富裕層ヴィーガン常連']
+  },
+  {
+    id: 'vegan-hotel-09',
+    name: 'EMウェルネス 暮らしの発酵リゾート白浜（沖縄北中城村）',
+    instagram_id: '@kurashinohakko_resort',
+    instagram_url: 'https://www.instagram.com/kurashinohakko_resort',
+    genre: 'ホテル',
+    area: '中頭郡北中城村喜舎場',
+    prefecture: '沖縄県',
+    profile_text: '発酵食と無農薬野菜のヴィーガン朝食・ディナービュッフェ完備の先駆的ウェルネスホテル。',
+    features: ['沖縄北中城', 'ウェルネスホテル', 'ヴィーガンビュッフェ', '発酵食・無農薬']
+  },
+  {
+    id: 'vegan-hotel-10',
+    name: 'TRUNK(HOTEL) YOYOGI PARK（東京代々木公園）',
+    instagram_id: '@trunkhotel_yoyogipark',
+    instagram_url: 'https://www.instagram.com/trunkhotel_yoyogipark',
+    genre: 'ホテル',
+    area: '渋谷区富ヶ谷',
+    prefecture: '東京都',
+    profile_text: '富裕層インバウンドが宿泊する代々木公園前のブティックホテル。プラントベースメニュー充実。',
+    features: ['代々木公園前', 'ブティックホテル', '富裕層インバウンド', 'プラントベース充実']
+  },
+  {
+    id: 'vegan-hotel-11',
+    name: 'ハイアット セントリック 銀座 東京（NAMIKI667）',
+    instagram_id: '@hyattcentricginza',
+    instagram_url: 'https://www.instagram.com/hyattcentricginza',
+    genre: 'ホテル',
+    area: '中央区銀座',
+    prefecture: '東京都',
+    profile_text: '銀座並木通りのラグジュアリーホテル。季節のヴィーガンコースやデザートを常時展開。',
+    features: ['銀座並木通り', 'ハイアットラグジュアリー', 'ヴィーガンコース', '洗練ダイニング']
+  },
+  {
+    id: 'vegan-hotel-12',
+    name: 'HOTEL THE MITSUI KYOTO（京都二条城前）',
+    instagram_id: '@hotel_the_mitsui_kyoto',
+    instagram_url: 'https://www.instagram.com/hotel_the_mitsui_kyoto',
+    genre: 'ホテル',
+    area: '京都市中京区二条油小路町',
+    prefecture: '京都府',
+    profile_text: '二条城に隣接する三井家ゆかりの最高峰ホテル。ヴィーガン特別懐石・デザート対応。',
+    features: ['二条城隣接', '最高峰ラグジュアリー', 'ヴィーガン懐石対応', '庭園美']
+  },
+  {
+    id: 'vegan-hotel-13',
+    name: 'W 大阪（心斎橋）',
+    instagram_id: '@wosakahotel',
+    instagram_url: 'https://www.instagram.com/wosakahotel',
+    genre: 'ホテル',
+    area: '大阪市中央区南船場',
+    prefecture: '大阪府',
+    profile_text: 'マリオット系ラグジュアリーライフスタイルホテル。多国籍ゲストのヴィーガンリクエストに対応。',
+    features: ['心斎橋一等地', 'Wホテル', 'ラグジュアリーライフスタイル', 'グローバル客対応']
+  },
+  {
+    id: 'vegan-hotel-14',
+    name: '京都ブライトンホテル（京都御所）',
+    instagram_id: '@kyotobrightonhotel',
+    instagram_url: 'https://www.instagram.com/kyotobrightonhotel',
+    genre: 'ホテル',
+    area: '京都市上京区新町通',
+    prefecture: '京都府',
+    profile_text: '京都御所西側の名門ホテル。精進・ヴィーガン京料理の評価が高い。',
+    features: ['京都御所西', '名門ホテル', 'ヴィーガン京料理', '静謐な上質空間']
+  },
+  {
+    id: 'vegan-hotel-15',
+    name: 'ニセコノーザンリゾート・アンヌプリ',
+    instagram_id: '@nisekonorthern',
+    instagram_url: 'https://www.instagram.com/nisekonorthern',
+    genre: 'ホテル',
+    area: '虻田郡ニセコ町ニセコ',
+    prefecture: '北海道',
+    profile_text: '冬季欧米豪の富裕層スキー客が集う国際リゾート。ヴィーガンメニューを標準装備。',
+    features: ['ニセコスキーリゾート', '欧米豪富裕層', 'インターナショナル対応', 'ヴィーガン標準装備']
   }
 ];
 
