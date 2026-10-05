@@ -140,87 +140,352 @@ async function fetchDuckDuckGoHtml(query: string): Promise<string> {
 
 // 🎯 高確度シードマスターデータベース（即時・高精度フォールバック対応）
 export const HIGH_IMPACT_SEEDS = {
-  // 🍜 全国の有力ヴィーガンラーメン店舗
+  // 🍜 全国の有力ヴィーガンラーメン店舗（北海道〜沖縄、福岡を含む全国網羅マスター）
   ramen: [
+    // ── 福岡・九州エリア ──
     {
-      instagram_id: '@ts_tantan_jp',
-      display_name: 'T\'sたんたん（T\'sレストラン）',
+      instagram_id: '@vegan.halalramen__yadokari',
+      display_name: 'Vegan Ramen YADOKARI（福岡平尾）',
       business_type: 'ラーメン',
-      profile_text: '東京駅・上野駅・池袋等に展開する日本初のヴィーガンラーメン専門店。肉・魚介・卵・乳製品不使用の濃厚担々麺や醤油ラーメンで訪日外国人・健康志向層から圧倒的人気。',
-      instagram_url: 'https://www.instagram.com/ts_tantan_jp',
-      tags: ['全国', '東京', 'ヴィーガンラーメン', 'インバウンド大人気']
+      profile_text: '福岡市中央区平尾の100%植物性ヴィーガンラーメン専門店。五葷不使用・グルテンフリー麺対応。ヴィーガン餃子や野菜寿司も展開しインバウンド旅行客から大絶賛。',
+      instagram_url: 'https://www.instagram.com/vegan.halalramen__yadokari',
+      tags: ['福岡', '九州', 'ヴィーガンラーメン', '専門店', 'グルテンフリー']
     },
     {
-      instagram_id: '@vegan_ramen_uzu',
-      display_name: 'Vegan Ramen UZU（東京・京都）',
+      instagram_id: '@sushi_shima_fukuoka',
+      display_name: '鮨しま（福岡港・ヴィーガン豚骨風ラーメン）',
       business_type: 'ラーメン',
-      profile_text: 'チームラボとコラボレーションしたミシュランガイド掲載のヴィーガンラーメン店。完全植物性素材のみで引いた極上スープと空間体験で海外旅行客が殺到。',
-      instagram_url: 'https://www.instagram.com/vegan_ramen_uzu',
-      tags: ['全国', '東京', '京都', 'ヴィーガンラーメン', 'ミシュラン']
+      profile_text: '福岡市中央区港の鮨名店がランチ限定で提供する「ヴィーガンOK濃厚豚骨風ラーメン」。豆乳と香味野菜の極上出汁でヴィーガン・外国人客が殺到（要予約）。',
+      instagram_url: 'https://www.instagram.com/sushi_shima_fukuoka',
+      tags: ['福岡', '九州', 'ヴィーガンラーメン', '豚骨風', '名店']
     },
     {
-      instagram_id: '@kyushujangara',
-      display_name: '九州じゃんがら（原宿・秋葉原・銀座）',
+      instagram_id: '@bugoro_all_vegan',
+      display_name: 'BUGORO ALL VEGAN（ブーゴロ 福岡）',
       business_type: 'ラーメン',
-      profile_text: '東京の有名豚骨ラーメン店が本気で開発した完全植物性「ヴィーガンこぼんしゃん」「からぼん」。外国人客のヴィーガン需要に応え大ヒット中。',
-      instagram_url: 'https://www.instagram.com/kyushujangara',
-      tags: ['全国', '東京', 'ヴィーガンラーメン', 'インバウンド対応']
+      profile_text: '福岡の古民家ヴィーガンラーメン＆カフェ。博多風ヴィーガンラーメンやヴィーガン担々麺を提供。こだわりの食後デザート需要が高い。',
+      instagram_url: 'https://www.instagram.com/bugoro_all_vegan',
+      tags: ['福岡', '九州', 'ヴィーガンラーメン', '古民家カフェ', '担々麺']
     },
     {
-      instagram_id: '@soranoiro.vege',
-      display_name: 'ソラノイロ（SORANOIRO）麹町・東京駅',
+      instagram_id: '@funadeya',
+      display_name: 'veggie食堂 船出屋（福岡古賀）',
       business_type: 'ラーメン',
-      profile_text: 'ミシュラン・ビブグルマン獲得店。元祖「ベジソバ」や完全ヴィーガン・グルテンフリーラーメンのパイオニア。食後のデザートにもこだわり。',
-      instagram_url: 'https://www.instagram.com/soranoiro.vege',
-      tags: ['全国', '東京', 'ヴィーガンラーメン', 'グルテンフリー']
+      profile_text: '福岡県古賀市のオーガニック＆ヴィーガン食堂。完全植物性の特製ヴィーガンラーメンや薬膳麺、アレルギー対応スイーツを展開。',
+      instagram_url: 'https://www.instagram.com/funadeya',
+      tags: ['福岡', '九州', 'ヴィーガンラーメン', 'オーガニック', '薬膳']
     },
     {
-      instagram_id: '@saido_tokyo',
-      display_name: '菜道（SAIDO）自由が丘',
+      instagram_id: '@marutan_official',
+      display_name: '博多拉担麺 まるたん（天神店・福岡）',
       business_type: 'ラーメン',
-      profile_text: '世界一のヴィーガンレストランに選出（HappyCow世界ランキング第1位）。特製ヴィーガンラーメン・まぜそば・和食を提供。外国人客比率90%以上。',
-      instagram_url: 'https://www.instagram.com/saido_tokyo',
-      tags: ['全国', '東京', 'ヴィーガンラーメン', '世界No1']
+      profile_text: '福岡・天神で話題の植物性100%スープ「ビーガンラータンメン」。大豆ミートと胡麻香るスープでヘルシー志向客・訪日外国人を集客。',
+      instagram_url: 'https://www.instagram.com/marutan_official',
+      tags: ['福岡', '九州', 'ヴィーガンラーメン', '担々麺', '天神']
     },
     {
-      instagram_id: '@chabuzen',
-      display_name: '薬膳食堂ちゃぶ屋（下北沢）',
+      instagram_id: '@rotacafe_fukuoka',
+      display_name: 'Rota Cafe（ロタカフェ 福岡大名）',
       business_type: 'ラーメン',
-      profile_text: '完全ヴィーガン＆オーガニックラーメン店。グルテンフリー麺・無化調薬膳スープが海外ヴィーガン客から絶賛。',
-      instagram_url: 'https://www.instagram.com/chabuzen',
-      tags: ['全国', '東京', 'ヴィーガンラーメン', 'オーガニック']
+      profile_text: '福岡大名のヴィーガン・マクロビ名店。グルテンフリーの特製ヴィーガン麺メニューを展開。アイス・スイーツとの親和性が極めて高い。',
+      instagram_url: 'https://www.instagram.com/rotacafe_fukuoka',
+      tags: ['福岡', '九州', 'ヴィーガンラーメン', 'グルテンフリー', '大名']
+    },
+
+    // ── 大阪・関西エリア ──
+    {
+      instagram_id: '@mercyveganramen',
+      display_name: 'MERCY Vegan Ramen（大阪博労町）',
+      business_type: 'ラーメン',
+      profile_text: '大阪・本町/心斎橋エリアのヴィーガンラーメン専門店。米粉特製麺によるグルテンフリー＆100%植物性ラーメン。外国人客比率90%以上。',
+      instagram_url: 'https://www.instagram.com/mercyveganramen',
+      tags: ['大阪', '関西', 'ヴィーガンラーメン', '専門店', 'グルテンフリー']
+    },
+    {
+      instagram_id: '@the_fire_vegan_osaka',
+      display_name: 'The Fire Vegan Osaka（心斎橋）',
+      business_type: 'ラーメン',
+      profile_text: '大阪心斎橋のヴィーガンラーメン＆ダイナー。ヴィーガンとんこつラーメンや餃子を提供。ナイトタイムのデザート注文需要大。',
+      instagram_url: 'https://www.instagram.com/the_fire_vegan_osaka',
+      tags: ['大阪', '関西', 'ヴィーガンラーメン', '心斎橋', 'インバウンド']
+    },
+    {
+      instagram_id: '@vege_yuniwa',
+      display_name: 'ベジラーメンゆにわ（大阪枚方）',
+      business_type: 'ラーメン',
+      profile_text: '日本初のヴィーガンラーメン専門店の草分け。10種以上の厳選野菜と無化調出汁による至高のプラントベースラーメンを提供。',
+      instagram_url: 'https://www.instagram.com/vege_yuniwa',
+      tags: ['大阪', '関西', 'ヴィーガンラーメン', '元祖', '無化調']
+    },
+    {
+      instagram_id: '@papurika_vegan',
+      display_name: 'パプリカ食堂ヴィーガン（大阪四ツ橋）',
+      business_type: 'ラーメン',
+      profile_text: '関西を代表するヴィーガンレストラン。特製ヴィーガンラーメンや担々麺、オーガニックヴィーガンスイーツをラインナップ。',
+      instagram_url: 'https://www.instagram.com/papurika_vegan',
+      tags: ['大阪', '関西', 'ヴィーガンラーメン', '四ツ橋', 'オーガニック']
+    },
+
+    // ── 京都エリア ──
+    {
+      instagram_id: '@veganramen_uzu_kyoto',
+      display_name: 'Vegan Ramen UZU KYOTO（京都市役所前）',
+      business_type: 'ラーメン',
+      profile_text: 'チームラボのアート空間と融合したミシュランガイド掲載のヴィーガンラーメン名店。完全植物性の一杯に世界中から予約殺到。',
+      instagram_url: 'https://www.instagram.com/veganramen_uzu_kyoto',
+      tags: ['京都', '関西', 'ヴィーガンラーメン', 'ミシュラン', 'チームラボ']
     },
     {
       instagram_id: '@towazen_ramen',
-      display_name: '京都 豆乳ラーメン 豆禅（Towazen）',
+      display_name: '京都 豆乳ラーメン 豆禅（Towazen 下鴨）',
       business_type: 'ラーメン',
-      profile_text: '京都・下鴨のヴィーガン豆乳ラーメン専門店。自家製濃厚豆乳スープと京湯葉を使用。ヴィーガン・ベジタリアン観光客の聖地。',
+      profile_text: '京都・下鴨のヴィーガン豆乳ラーメン専門店。自家製濃厚豆乳スープと京湯葉を使用。欧米豪のヴィーガン観光客が必ず訪れる聖地。',
       instagram_url: 'https://www.instagram.com/towazen_ramen',
-      tags: ['全国', '京都', 'ヴィーガンラーメン', '豆乳']
-    },
-    {
-      instagram_id: '@halal_vegan_ramen_honolu',
-      display_name: '麺屋 帆のる（Honolu）',
-      business_type: 'ラーメン',
-      profile_text: 'ハラール＆完全ヴィーガン対応ラーメン。特製野菜ポタージュスープで海外ムスリム・ヴィーガン顧客から絶大な信頼。',
-      instagram_url: 'https://www.instagram.com/halal_vegan_ramen_honolu',
-      tags: ['全国', '東京', '大阪', 'ヴィーガンラーメン', 'ハラール']
+      tags: ['京都', '関西', 'ヴィーガンラーメン', '豆乳', '下鴨']
     },
     {
       instagram_id: '@peace_ramen_kyoto',
       display_name: 'Vegan Ramen Peace 京都河原町',
       business_type: 'ラーメン',
-      profile_text: '京都四条河原町の完全植物性ラーメン店。100%ヴィーガンの醤油・味噌・担々麺を提供し、食後のお口直しスイーツの要望多数。',
+      profile_text: '京都四条河原町の完全植物性ラーメン店。ヴィーガン醤油・味噌・担々麺を提供。海外ツーリストの食後スイーツ需要が旺盛。',
       instagram_url: 'https://www.instagram.com/peace_ramen_kyoto',
-      tags: ['全国', '京都', 'ヴィーガンラーメン', '河原町']
+      tags: ['京都', '関西', 'ヴィーガンラーメン', '河原町', '外国人人気']
+    },
+    {
+      instagram_id: '@engine_ramen',
+      display_name: 'Engine Ramen（京都河原町）',
+      business_type: 'ラーメン',
+      profile_text: '京都・河原町の野菜ポタージュ系ヴィーガンラーメン店。グルテンフリー対応麺も完備し外国人客で連日満席。',
+      instagram_url: 'https://www.instagram.com/engine_ramen',
+      tags: ['京都', '関西', 'ヴィーガンラーメン', '濃厚ポタージュ']
+    },
+    {
+      instagram_id: '@unoyukijp',
+      display_name: 'UNO RAMEN（京都）',
+      business_type: 'ラーメン',
+      profile_text: '身体に優しい豆乳ベースのヴィーガン＆グルテンフリーラーメン専門店。クリーンな一杯とお口直しデザートの相乗効果抜群。',
+      instagram_url: 'https://www.instagram.com/unoyukijp',
+      tags: ['京都', '関西', 'ヴィーガンラーメン', 'グルテンフリー']
+    },
+
+    // ── 東京・関東エリア ──
+    {
+      instagram_id: '@ts_tantan_jp',
+      display_name: 'T\'sたんたん（東京駅・上野・池袋）',
+      business_type: 'ラーメン',
+      profile_text: '東京駅・上野駅・池袋等に展開する日本初のヴィーガン担々麺専門店。肉・魚介・卵・乳製品不使用。インバウンド客から圧倒的人気。',
+      instagram_url: 'https://www.instagram.com/ts_tantan_jp',
+      tags: ['東京', '全国', 'ヴィーガンラーメン', '東京駅', '担々麺']
+    },
+    {
+      instagram_id: '@soranoiro.vege',
+      display_name: 'ソラノイロ（SORANOIRO）麹町・東京駅',
+      business_type: 'ラーメン',
+      profile_text: 'ミシュラン・ビブグルマン獲得店。元祖「ベジソバ」や完全ヴィーガン・グルテンフリーラーメンのパイオニア。食後のアイス需要大。',
+      instagram_url: 'https://www.instagram.com/soranoiro.vege',
+      tags: ['東京', '全国', 'ヴィーガンラーメン', 'ミシュラン', 'ベジソバ']
+    },
+    {
+      instagram_id: '@tokyo.vegan.ramen.center',
+      display_name: 'Tokyo Vegan Ramen Center（原宿）',
+      business_type: 'ラーメン',
+      profile_text: '原宿に位置する100%ヴィーガンラーメン専門店。フォトジェニックなヴィーガンラーメンで海外SNSで爆発的拡散。',
+      instagram_url: 'https://www.instagram.com/tokyo.vegan.ramen.center',
+      tags: ['東京', '原宿', 'ヴィーガンラーメン', 'SNS話題']
+    },
+    {
+      instagram_id: '@kyushujangara',
+      display_name: '九州じゃんがら（原宿・秋葉原・銀座）',
+      business_type: 'ラーメン',
+      profile_text: '東京の有名豚骨ラーメン店が本気で開発した完全植物性「ヴィーガンこぼんしゃん」「からぼん」。外国人客多数来店。',
+      instagram_url: 'https://www.instagram.com/kyushujangara',
+      tags: ['東京', '全国', 'ヴィーガンラーメン', '原宿', '豚骨風']
+    },
+    {
+      instagram_id: '@saido_tokyo',
+      display_name: '菜道（SAIDO 自由が丘）',
+      business_type: 'ラーメン',
+      profile_text: '世界一のヴィーガンレストランに選出（HappyCow世界第1位）。特製ヴィーガンラーメン・まぜそばを提供。外国人客比率90%以上。',
+      instagram_url: 'https://www.instagram.com/saido_tokyo',
+      tags: ['東京', '全国', 'ヴィーガンラーメン', '世界No1', '自由が丘']
+    },
+    {
+      instagram_id: '@chabuzen',
+      display_name: '薬膳食堂ちゃぶ屋（下北沢）',
+      business_type: 'ラーメン',
+      profile_text: '完全ヴィーガン＆オーガニックラーメン店。グルテンフリー麺・無化調薬膳スープが欧米ヴィーガン客から熱狂的人気。',
+      instagram_url: 'https://www.instagram.com/chabuzen',
+      tags: ['東京', '全国', 'ヴィーガンラーメン', '下北沢', '薬膳']
+    },
+    {
+      instagram_id: '@halal_vegan_ramen_honolu',
+      display_name: '麺屋 帆のる（Honolu 日本橋・浅草・恵比寿）',
+      business_type: 'ラーメン',
+      profile_text: 'ハラール＆完全ヴィーガン認証ラーメン店。特製濃厚野菜ポタージュスープで海外ムスリム・ヴィーガンから絶大な信頼。',
+      instagram_url: 'https://www.instagram.com/halal_vegan_ramen_honolu',
+      tags: ['東京', '大阪', 'ヴィーガンラーメン', 'ハラール', '日本橋']
     },
     {
       instagram_id: '@afuri_japan',
-      display_name: 'AFURI（阿夫利）',
+      display_name: 'AFURI（阿夫利 恵比寿・六本木・原宿）',
       business_type: 'ラーメン',
-      profile_text: '厳選野菜をふんだんに使った彩りヴィーガンらーめんをグローバル展開。スタイリッシュな空間とヘルシー志向な顧客層にマッチ。',
+      profile_text: '厳選野菜をふんだんに使った彩りヴィーガンらーめんをグローバル展開。スタイリッシュな空間とヘルシー志向層にマッチ。',
       instagram_url: 'https://www.instagram.com/afuri_japan',
-      tags: ['全国', '東京', 'ヴィーガンラーメン', 'グローバル']
+      tags: ['東京', '全国', 'ヴィーガンラーメン', '恵比寿', '洗練']
+    },
+    {
+      instagram_id: '@samuraisakuta',
+      display_name: '麺匠 真武咲弥 渋谷店（ヴィーガン味噌）',
+      business_type: 'ラーメン',
+      profile_text: '渋谷道玄坂の炙り味噌ラーメン店が開発した本格「ヴィーガン味噌ラーメン」。香ばしい味噌と植物性スープで海外客が大行列。',
+      instagram_url: 'https://www.instagram.com/samuraisakuta',
+      tags: ['東京', '渋谷', 'ヴィーガンラーメン', '味噌']
+    },
+    {
+      instagram_id: '@lovinghut_japan',
+      display_name: 'Loving Hut（ラビングハット 神保町）',
+      business_type: 'ラーメン',
+      profile_text: '神保町の老舗ヴィーガンレストラン。100%植物性のヴィーガンラーメン・冷やし中華・スイーツを提供。',
+      instagram_url: 'https://www.instagram.com/lovinghut_japan',
+      tags: ['東京', '神保町', 'ヴィーガンラーメン', '老舗']
+    },
+    {
+      instagram_id: '@chabuton_official',
+      display_name: 'CHABUTON（ちゃぶとん 秋葉原・下北沢等）',
+      business_type: 'ラーメン',
+      profile_text: 'ミシュラン一つ星シェフ監修の「新ベジラーメン」。野菜の旨味だけで濃厚なコクを引き出したヴィーガンラーメンを展開。',
+      instagram_url: 'https://www.instagram.com/chabuton_official',
+      tags: ['東京', '全国', 'ヴィーガンラーメン', 'ミシュラン監修']
+    },
+    {
+      instagram_id: '@mugi_to_olive',
+      display_name: 'むぎとオリーブ 銀座店',
+      business_type: 'ラーメン',
+      profile_text: '銀座のミシュランビブグルマン掲載店。野菜出汁を極めたベジSOBAやヘルシーラーメンを提供。',
+      instagram_url: 'https://www.instagram.com/mugi_to_olive',
+      tags: ['東京', '銀座', 'ヴィーガンラーメン', 'ミシュラン']
+    },
+    {
+      instagram_id: '@ippudo_jp',
+      display_name: '一風堂 プラントベース（ルミネエスト新宿店）',
+      business_type: 'ラーメン',
+      profile_text: '博多一風堂が本気で開発した「プラントベース赤丸・白丸」。豚骨不使用ながら豆乳出汁でコクを完全再現。',
+      instagram_url: 'https://www.instagram.com/ippudo_jp',
+      tags: ['東京', '新宿', 'ヴィーガンラーメン', 'プラントベース']
+    },
+
+    // ── 神奈川・湘南エリア ──
+    {
+      instagram_id: '@ramenmuseum',
+      display_name: '新横浜ラーメン博物館（ベジ・ヴィーガン対応店）',
+      business_type: 'ラーメン',
+      profile_text: '新横浜ラーメン博物館では各名店がヴィーガン対応ラーメンを開発・提供中。国内外のラーメンファンが集まる拠点。',
+      instagram_url: 'https://www.instagram.com/ramenmuseum',
+      tags: ['神奈川', '横浜', 'ヴィーガンラーメン', '博物館']
+    },
+    {
+      instagram_id: '@magokoro_kamakura',
+      display_name: '麻心（まごころ 鎌倉・由比ヶ浜）',
+      business_type: 'ラーメン',
+      profile_text: '鎌倉由比ヶ浜のオーガニックカフェレストラン。麻の実を使用した特製ヴィーガンラーメン・麺料理を提供。',
+      instagram_url: 'https://www.instagram.com/magokoro_kamakura',
+      tags: ['神奈川', '鎌倉', 'ヴィーガンラーメン', 'オーガニック']
+    },
+
+    // ── 北海道エリア ──
+    {
+      instagram_id: '@vegan_ramen_meguri',
+      display_name: 'Vegan Ramen めぐり（北海道旭川）',
+      business_type: 'ラーメン',
+      profile_text: '旭川唯一の完全ヴィーガンラーメン専門店。地元有機野菜と北海道産小麦を使用した絶品ラーメンを提供。',
+      instagram_url: 'https://www.instagram.com/vegan_ramen_meguri',
+      tags: ['北海道', '旭川', 'ヴィーガンラーメン', '専門店']
+    },
+    {
+      instagram_id: '@ichiryuan_sapporo',
+      display_name: '一粒庵（札幌駅前 ミシュラン掲載店）',
+      business_type: 'ラーメン',
+      profile_text: '札幌駅前のミシュラン掲載名店。完全植物性・ヴィーガン対応の味噌ラーメンを開発。観光客から高評価。',
+      instagram_url: 'https://www.instagram.com/ichiryuan_sapporo',
+      tags: ['北海道', '札幌', 'ヴィーガンラーメン', 'ミシュラン']
+    },
+
+    // ── 愛知・中部エリア ──
+    {
+      instagram_id: '@vegikitchen_gugu',
+      display_name: 'ベジキッチン・グーグー（名古屋千種区）',
+      business_type: 'ラーメン',
+      profile_text: '名古屋市千種区のヴィーガン＆グルテンフリー店。名物のヴィーガン台湾まぜそばやラーメンが人気。スイーツ需要大。',
+      instagram_url: 'https://www.instagram.com/vegikitchen_gugu',
+      tags: ['愛知', '名古屋', 'ヴィーガンラーメン', 'まぜそば', 'グルテンフリー']
+    },
+    {
+      instagram_id: '@nico.chan_0725',
+      display_name: 'nico.chan（愛知あま市）',
+      business_type: 'ラーメン',
+      profile_text: '愛知県あま市のオーガニック自然食カフェ。植物性のヴィーガン麺メニューを展開し地元健康志向層に愛される。',
+      instagram_url: 'https://www.instagram.com/nico.chan_0725',
+      tags: ['愛知', '中部', 'ヴィーガンラーメン', '自然食']
+    },
+    {
+      instagram_id: '@ginza_kagari',
+      display_name: '銀座 篝 JRゲートタワー名古屋店',
+      business_type: 'ラーメン',
+      profile_text: '名古屋駅直結。極上野菜ポタージュで仕立てたヴィーガンSobaを提供。インバウンド客の人気スポット。',
+      instagram_url: 'https://www.instagram.com/ginza_kagari',
+      tags: ['愛知', '名古屋', 'ヴィーガンラーメン', '名駅']
+    },
+
+    // ── 広島・中国エリア ──
+    {
+      instagram_id: '@taco_sukeroku',
+      display_name: 'TACO SUKEROKU / VEGAN RAMEN（広島）',
+      business_type: 'ラーメン',
+      profile_text: '広島市内のヴィーガンラーメン店。完全植物性の尾道風ヴィーガンラーメンを提供し海外バックパッカーで賑わう。',
+      instagram_url: 'https://www.instagram.com/taco_sukeroku',
+      tags: ['広島', '中国', 'ヴィーガンラーメン', '尾道風']
+    },
+    {
+      instagram_id: '@gaba_ramen',
+      display_name: '我馬（GABA 広島）',
+      business_type: 'ラーメン',
+      profile_text: '広島の人気ラーメンチェーンが展開するプラントベースヴィーガンラーメン。平和記念公園周辺の観光客に大好評。',
+      instagram_url: 'https://www.instagram.com/gaba_ramen',
+      tags: ['広島', '中国', 'ヴィーガンラーメン', '広島市']
+    },
+
+    // ── 沖縄エリア ──
+    {
+      instagram_id: '@gajimaru_plantbased',
+      display_name: 'Cafe&Bar Gajimaru（沖縄恩納村）',
+      business_type: 'ラーメン',
+      profile_text: '沖縄・恩納村のヴィーガンレストラン。特製ヴィーガンラーメン、スパイシー麺、餃子を展開。グルテンフリー対応。',
+      instagram_url: 'https://www.instagram.com/gajimaru_plantbased',
+      tags: ['沖縄', 'ヴィーガンラーメン', '恩納村', 'リゾート']
+    },
+    {
+      instagram_id: '@veganramen.maruyoshi',
+      display_name: '麺神まるよし（読谷店・沖縄）',
+      business_type: 'ラーメン',
+      profile_text: '沖縄県読谷村のヴィーガンラーメン提供店。トリュフ香るヴィーガンラーメンが海外リゾート客に大人気。',
+      instagram_url: 'https://www.instagram.com/veganramen.maruyoshi',
+      tags: ['沖縄', 'ヴィーガンラーメン', '読谷村', 'トリュフ']
+    },
+    {
+      instagram_id: '@orange_shokudo_okinawa',
+      display_name: 'オレンジ食堂（沖縄金武町）',
+      business_type: 'ラーメン',
+      profile_text: '沖縄県金武町の完全植物性食堂。動物性食材不使用の「黒ごま濃厚ヴィーガン担々麺」が名物。',
+      instagram_url: 'https://www.instagram.com/orange_shokudo_okinawa',
+      tags: ['沖縄', 'ヴィーガンラーメン', '担々麺', '金武町']
+    },
+    {
+      instagram_id: '@soranoiro_okinawa',
+      display_name: 'ソラノイロ OKINAWA（那覇・のれん街）',
+      business_type: 'ラーメン',
+      profile_text: '那覇国際通り・のれん街店。沖縄限定のヴィーガン担々麺やベジソバを展開。観光客・地元客で賑わう。',
+      instagram_url: 'https://www.instagram.com/soranoiro_okinawa',
+      tags: ['沖縄', '那覇', 'ヴィーガンラーメン', '国際通り']
     }
   ],
 
@@ -400,15 +665,17 @@ function getSeedsForQuery(category?: string, keywords: string[] = [], location: 
     seeds.push(...HIGH_IMPACT_SEEDS.cafe);
   }
 
-  // 地域が指定されている場合、タグに地域を含むものを優先、全国指定ならすべて対象
+  // 地域が指定されている場合（例: 福岡、東京、大阪、京都、沖縄など）
   if (location && location !== '全国' && location !== '全国主要都市') {
-    return seeds.sort((a, b) => {
-      const aMatches = (a.tags || []).some(t => location.includes(t) || t.includes(location));
-      const bMatches = (b.tags || []).some(t => location.includes(t) || t.includes(location));
-      if (aMatches && !bMatches) return -1;
-      if (!aMatches && bMatches) return 1;
-      return 0;
-    });
+    const locClean = location.replace(/[都道府県市区町村]/g, '');
+    const matched = seeds.filter(s => 
+      (s.tags || []).some(t => t.includes(locClean) || location.includes(t)) ||
+      (s.display_name || '').includes(locClean) ||
+      (s.profile_text || '').includes(locClean)
+    );
+    const nonMatched = seeds.filter(s => !matched.includes(s));
+    // 地域完全一致を最優先にし、後ろに他地域の優良店を配置
+    return [...matched, ...nonMatched];
   }
 
   return seeds;
@@ -418,7 +685,7 @@ function getSeedsForQuery(category?: string, keywords: string[] = [], location: 
  * 極限まで簡単に：地域・カテゴリ・キーワードから、即戦力の店舗Instagramアカウントを自動検索・抽出
  */
 export async function findInstagramLeads(options: DiscoveryOptions): Promise<DiscoveredLead[]> {
-  const { location = '全国', keywords = [], limit = 15, category } = options;
+  const { location = '全国', keywords = [], limit = 50, category } = options;
   
   // 1. 検索クエリの最適化（DuckDuckGo用）
   let query = '';
@@ -466,22 +733,36 @@ export async function findInstagramLeads(options: DiscoveryOptions): Promise<Dis
       results.push({
         ...seed,
         status: 'new',
-        tags: [isNational ? '全国展開' : location, seed.business_type || 'ターゲット', '即戦力シード'],
+        tags: seed.tags || [isNational ? '全国展開' : location, seed.business_type || 'ターゲット'],
         created_at: new Date().toISOString(),
       });
       seenIds.add(seed.instagram_id?.toLowerCase());
     }
   }
 
-  // 4. 自動スコアリング（ラーメン、カレー、ホテル、ヴィーガンキーワード等を高加点）
+  // 4. 自動スコアリング（地域一致ボーナス加算）
+  const locClean = (!isNational && location) ? location.replace(/[都道府県市区町村]/g, '') : '';
   const scoredLeads: DiscoveredLead[] = results.map(lead => {
     const scoreResult = scoreLead(lead as Lead);
+    let totalScore = scoreResult.total;
+    const reasons = scoreResult.breakdown.map(b => `${b.reason} (+${b.score}点)`);
+
+    // 地域指定に完全一致する店舗には +20 点の特大ボーナス
+    if (locClean && (
+      (lead.tags || []).some(t => t.includes(locClean)) ||
+      (lead.display_name || '').includes(locClean) ||
+      (lead.profile_text || '').includes(locClean)
+    )) {
+      totalScore += 20;
+      reasons.unshift(`指定エリア (${location}) 完全一致 (+20点)`);
+    }
+
     return {
       ...lead,
-      score: scoreResult.total,
-      scoreReasons: scoreResult.breakdown.map(b => `${b.reason} (+${b.score}点)`),
+      score: totalScore,
+      scoreReasons: reasons,
     };
   }).sort((a, b) => b.score - a.score);
 
-  return scoredLeads.slice(0, limit);
+  return scoredLeads.slice(0, Math.max(limit, 50));
 }

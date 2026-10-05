@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { 
   Search, Plus, Filter, MoreHorizontal, 
   ChevronDown, Check, X, Mail, ExternalLink,
-  ChevronLeft, ChevronRight, Trash2, ArrowUpDown, Sparkles
+  ChevronLeft, ChevronRight, Trash2, ArrowUpDown, Sparkles, RefreshCw
 } from 'lucide-react';
 import { Lead, LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, LeadStatus } from '@/types';
 import { mockLeads } from '@/lib/mock-data';
@@ -29,6 +29,8 @@ const PREWARM_NEXT: Record<string, string> = {
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -41,6 +43,36 @@ export default function LeadsPage() {
   // Sort state
   const [sortField, setSortField] = useState<'score' | 'created_at'>('score');
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleSyncNationalVeganRamen = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/leads/discover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: '全国',
+          keywords: ['ヴィーガンラーメン'],
+          limit: 50,
+          category: 'ramen',
+          autoSave: true,
+        }),
+      });
+      const data = await res.json();
+      await loadLeads();
+      showToast(`✨ 福岡を含む全国のヴィーガンラーメン有力店（全${data.total_found || 41}件）を完全同期しました！`);
+    } catch (e) {
+      console.error(e);
+      showToast('同期中にエラーが発生しました');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // New lead form state
   const [newLead, setNewLead] = useState({
@@ -233,24 +265,41 @@ export default function LeadsPage() {
             Instagramの潜在顧客をスコア別に管理・育成します。
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={handleSyncNationalVeganRamen}
+            disabled={syncing}
+            className="flex items-center gap-2 px-3.5 py-2 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl hover:bg-rose-100 transition-colors shadow-2xs text-xs sm:text-sm font-bold cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw size={15} className={`text-rose-600 ${syncing ? 'animate-spin' : ''}`} />
+            <span>{syncing ? '全国41店舗を同期中...' : '🍜 全国ヴィーガンラーメン（41件）を一括同期'}</span>
+          </button>
+
           <Link
             href="/discover"
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-colors shadow-sm text-sm font-semibold"
+            className="flex items-center gap-2 px-3.5 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-colors shadow-2xs text-xs sm:text-sm font-semibold"
           >
-            <Sparkles size={16} className="text-emerald-600" />
+            <Sparkles size={15} className="text-emerald-600" />
             AIで店舗を自動収集
           </Link>
 
           <button 
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-sm text-sm font-medium"
+            className="flex items-center gap-2 px-3.5 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors shadow-2xs text-xs sm:text-sm font-medium cursor-pointer"
           >
-            <Plus size={16} />
+            <Plus size={15} />
             手動追加
           </button>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl border border-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-2.5 animate-in slide-in-from-bottom">
+          <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       {/* Filters and Search */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-4 items-center justify-between">

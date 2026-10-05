@@ -114,7 +114,7 @@ export default function DiscoverPage() {
   const [activeTab, setActiveTab] = useState<'smart' | 'custom'>('smart');
   const [location, setLocation] = useState('全国');
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>(['ヴィーガンラーメン']);
-  const [limit, setLimit] = useState(15);
+  const [limit, setLimit] = useState(50);
   const [loading, setLoading] = useState(false);
   const [activePackId, setActivePackId] = useState<string | null>(null);
   const [results, setResults] = useState<DiscoveredLead[]>([]);
@@ -140,7 +140,7 @@ export default function DiscoverPage() {
         body: JSON.stringify({
           location: pack.location,
           keywords: pack.keywords,
-          limit: 15,
+          limit: 50,
           category: pack.category,
           autoSave: true,
         }),
@@ -378,24 +378,29 @@ export default function DiscoverPage() {
                 <Sliders className="w-4 h-4 text-emerald-600" />
                 取得件数上限
               </label>
-              <div className="flex gap-3">
-                {[5, 10, 15, 20].map(cnt => (
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { val: 15, label: '15件' },
+                  { val: 30, label: '30件' },
+                  { val: 50, label: '50件 (推奨)' },
+                  { val: 100, label: '全件一括 (100件)' }
+                ].map(item => (
                   <button
-                    key={cnt}
+                    key={item.val}
                     type="button"
-                    onClick={() => setLimit(cnt)}
-                    className={`flex-1 py-3 rounded-2xl border text-sm font-bold transition-all ${
-                      limit === cnt
+                    onClick={() => setLimit(item.val)}
+                    className={`py-3 px-2 rounded-2xl border text-xs sm:text-sm font-bold transition-all text-center ${
+                      limit === item.val
                         ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-500/20'
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    {cnt}件
+                    {item.label}
                   </button>
                 ))}
               </div>
               <p className="text-xs text-gray-400">
-                ※BAN防止のため、1回あたり15件前後の段階的アプローチを推奨しています。
+                ※全国津々浦々の有力店舗を漏れなく収集し、リード管理DBへ自動保存します。
               </p>
             </div>
           </div>

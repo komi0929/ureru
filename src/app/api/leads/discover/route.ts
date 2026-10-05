@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     const { 
       location = '全国', 
       keywords = ['ヴィーガン', 'ラーメン'], 
-      limit = 15, 
+      limit = 50, 
       autoSave = true,
       category
     } = body;
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const discovered = await findInstagramLeads({
       location,
       keywords: Array.isArray(keywords) ? keywords : [keywords],
-      limit: Number(limit) || 15,
+      limit: Number(limit) || 50,
       category,
     });
 
