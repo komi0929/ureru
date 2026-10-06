@@ -1,11 +1,25 @@
 import { Lead } from '@/types';
+import { VEGAN_RESTAURANTS_EXPANSION } from './vegan-restaurants-expansion';
+
+export type VeganGenre =
+  | 'ラーメン'
+  | 'バーガー'
+  | 'カフェ'
+  | 'カレー'
+  | 'レストラン'
+  | 'ホテル'
+  | '和食・精進'
+  | 'マクロビ・オーガニック'
+  | '中華・台湾素食'
+  | 'イタリアン・ピザ'
+  | '居酒屋・バー';
 
 export interface VeganRestaurantItem {
   id: string;
   name: string;
   instagram_id: string;
   instagram_url: string;
-  genre: 'ラーメン' | 'バーガー' | 'カフェ' | 'カレー' | 'レストラン' | 'ホテル';
+  genre: VeganGenre;
   area: string;
   prefecture: string;
   profile_text: string;
@@ -2237,7 +2251,8 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
  * 営業用リード型（Lead）への変換ヘルパー
  */
 export function getInitialVeganLeads(): Lead[] {
-  return VEGAN_RESTAURANTS_MASTER.map((item, index) => {
+  const all: VeganRestaurantItem[] = [...VEGAN_RESTAURANTS_MASTER, ...VEGAN_RESTAURANTS_EXPANSION];
+  return all.map((item, index) => {
     return {
       id: item.id,
       instagram_id: item.instagram_id,
@@ -2254,7 +2269,7 @@ export function getInitialVeganLeads(): Lead[] {
       priority: 'high',
       tags: [item.prefecture, item.genre, ...item.features],
       notes: `${item.genre}（${item.area}）/ 特徴: ${item.features.join('・')}`,
-      created_at: new Date(Date.now() - (VEGAN_RESTAURANTS_MASTER.length - index) * 3600000).toISOString(),
+      created_at: new Date(Date.now() - (all.length - index) * 3600000).toISOString(),
     };
   });
 }
