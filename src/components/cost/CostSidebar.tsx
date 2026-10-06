@@ -64,7 +64,7 @@ export default function CostSidebar() {
             <span>TOPポータルに戻る</span>
           </Link>
           <Link
-            href="/dashboard"
+            href="/sales"
             className="flex items-center justify-between px-3 py-1.5 text-xs font-medium text-emerald-800 bg-emerald-50/80 hover:bg-emerald-100/80 rounded-lg transition-colors border border-emerald-200/60"
           >
             <span className="flex items-center gap-2">

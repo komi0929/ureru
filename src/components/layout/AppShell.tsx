@@ -16,7 +16,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     pathname === '/' || 
     pathname === '/order' || 
     pathname.startsWith('/manufacturing') || 
-    pathname.startsWith('/orders')
+    pathname.startsWith('/orders') ||
+    pathname.startsWith('/sales')
   ) {
     return (
       <div className="min-h-screen w-full bg-slate-50/60 text-slate-900 flex flex-col">

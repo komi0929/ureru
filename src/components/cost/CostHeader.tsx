@@ -84,7 +84,7 @@ export default function CostHeader() {
 
           {/* Switch to Sales Tool shortcut */}
           <Link
-            href="/dashboard"
+            href="/sales"
             className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-800 bg-emerald-50/80 hover:bg-emerald-100/80 rounded-lg transition-colors border border-emerald-200/60"
             title="営業促進ツール（URERU）へ移動"
           >

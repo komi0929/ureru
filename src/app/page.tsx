@@ -253,22 +253,22 @@ export default function PortalHomePage() {
                 営業促進 <span className="text-xs font-semibold text-slate-400 font-mono ml-1">URERU</span>
               </h2>
               <p className="text-xs text-slate-500 leading-relaxed mb-5">
-                見込みカフェ抽出からAIパーソナライズDM送信、無料サンプルのカンバン管理、店舗アプローチを自動化。
+                ヴィーガン飲食店リストを一覧表・看板で管理。DM定型文をワンクリックでコピーし、進捗をひと目で把握。
               </p>
 
               {/* Feature List */}
               <div className="space-y-2 mb-6 border-t border-slate-100 pt-4 text-[11px] text-slate-600">
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                  <span>店舗自動収集 & AI-DM生成</span>
+                  <span>一覧表 ⇔ 看板 ワンタップ切替</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                  <span>サンプル送付 5段階カンバン</span>
+                  <span>DM定型文の保存 ＆ 店名自動差し込み</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                  <span>確度別リード・ステータス管理</span>
+                  <span>7段階の進捗管理・メモ・除外</span>
                 </div>
               </div>
             </div>
@@ -276,19 +276,12 @@ export default function PortalHomePage() {
             {/* Actions */}
             <div>
               <Link
-                href="/dashboard"
+                href="/sales"
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-xs group-hover:bg-blue-600 cursor-pointer"
               >
-                <span>営業促進を開く</span>
+                <span>営業ボードを開く</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </Link>
-              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
-                <Link href="/leads" className="hover:text-slate-800 transition-colors">リード一覧</Link>
-                <span>·</span>
-                <Link href="/samples" className="hover:text-slate-800 transition-colors">サンプル管理</Link>
-                <span>·</span>
-                <Link href="/discover" className="hover:text-slate-800 transition-colors">店舗収集</Link>
-              </div>
             </div>
           </div>
 

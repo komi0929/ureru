@@ -1,734 +1,579 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import {
-  Copy,
-  Check,
-  Plus,
-  ChevronRight,
-  ExternalLink,
-  Clock,
-  Send,
-  Zap,
-  SkipForward,
-  Heart,
-  MessageCircle,
-  CheckCircle2,
-  AlertTriangle,
-  AtSign,
-  Sparkles,
-  Edit3,
-  Save,
-  RotateCcw,
-  X,
+  ArrowLeft, Search, Table2, Columns3, FileText, Copy, Check, ExternalLink,
+  EyeOff, RotateCcw, X, Save,
 } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { mockLeads } from '@/lib/mock-data';
 import { Lead } from '@/types';
+import { mockLeads } from '@/lib/mock-data';
 
-export const DEFAULT_DM_TEMPLATE = `{{name}}こんにちは！突然のご連絡失礼いたします✨
+// ============================================================
+// 営業ボード（リスト一覧・進捗管理・DM定型文を1画面に集約）
+// ※ リスト抽出はシステム外（担当AIとの対話）で行い、ここには表示しない
+// ============================================================
+
+// ── 進捗ステージ（7段階にシンプル化） ──
+type Stage = 'new' | 'dm_sent' | 'replied' | 'sample' | 'negotiating' | 'won' | 'lost';
+
+const STAGES: { key: Stage; label: string; dot: string; chip: string }[] = [
+  { key: 'new',         label: '未着手',     dot: 'bg-slate-300',   chip: 'bg-slate-100 text-slate-700' },
+  { key: 'dm_sent',     label: 'DM送信済',   dot: 'bg-sky-400',     chip: 'bg-sky-50 text-sky-800' },
+  { key: 'replied',     label: '返信あり',   dot: 'bg-violet-400',  chip: 'bg-violet-50 text-violet-800' },
+  { key: 'sample',      label: 'サンプル',   dot: 'bg-amber-400',   chip: 'bg-amber-50 text-amber-800' },
+  { key: 'negotiating', label: '商談中',     dot: 'bg-orange-400',  chip: 'bg-orange-50 text-orange-800' },
+  { key: 'won',         label: '成約',       dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-800' },
+  { key: 'lost',        label: '見送り',     dot: 'bg-rose-300',    chip: 'bg-rose-50 text-rose-700' },
+];
+const STAGE_MAP = Object.fromEntries(STAGES.map(s => [s.key, s])) as Record<Stage, typeof STAGES[number]>;
+
+// 旧ステータス → 新ステージへの変換（過去データとの互換）
+function normalizeStage(status?: string | null): Stage {
+  switch (status) {
+    case 'contacted':
+    case 'dm_drafted':
+    case 'dm_sent':
+      return 'dm_sent';
+    case 'replied':
+      return 'replied';
+    case 'sample_requested':
+    case 'sample_shipped':
+    case 'sample_sent':
+    case 'sample':
+      return 'sample';
+    case 'negotiating':
+      return 'negotiating';
+    case 'contracted':
+    case 'won':
+      return 'won';
+    case 'lost':
+      return 'lost';
+    default:
+      return 'new';
+  }
+}
+
+// ── localStorage キー（既存キーを継続利用） ──
+const KEY_EXCLUDED = 'soystories_excluded_restaurant_ids_v1';
+const KEY_STATUSES = 'soystories_restaurant_statuses_v1';
+const KEY_TEMPLATE = 'soystories_fixed_dm_template';
+const KEY_NOTES = 'soystories_lead_memos_v1';
+const KEY_VIEW = 'soystories_sales_view_v1';
+
+const DEFAULT_TEMPLATE = `{{店名}}様
+
+突然のご連絡失礼いたします。
 福岡でプラントベース（乳・卵不使用）のクラフトアイスを製造しているSoyStoriesと申します🌿
 
-貴店のこだわりメニューに合う無料サンプルをお届けしたいのですが、お試しいただけないでしょうか？🍨
+貴店のメニューに合うデザートとして、無料サンプルをお届けできればと思いご連絡しました。
+ご興味があれば、お気軽にご返信いただけますと幸いです🍨
+
 https://www.soystories.cafe/`;
 
-// 定型文に変数を差し込む関数
-function formatDM(template: string, lead?: { display_name?: string | null; name?: string | null }): string {
-  if (!lead) return '';
-  const storeName = lead.display_name || lead.name || '';
-  const nameLine = storeName && !storeName.startsWith('@') ? `${storeName}様\n` : '';
-  
-  if (template.includes('{{name}}')) {
-    return template.replace(/\{\{name\}\}/g, nameLine);
+function buildDM(template: string, lead: Lead): string {
+  const name = (lead.display_name || lead.name || '').trim();
+  let text = template.replace(/\{\{店名\}\}/g, name);
+  // 旧形式 {{name}}（「店名様＋改行」に展開）にも対応
+  text = text.replace(/\{\{name\}\}/g, name ? `${name}様\n` : '');
+  return text;
+}
+
+function readJSON<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
   }
-  return `${nameLine}${template}`;
+}
+function writeJSON(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+  } catch {
+    /* noop */
+  }
 }
 
-// ============================================================
-// 営業モード - Instagram DMの実戦フロー
-// ============================================================
+export default function SalesBoardPage() {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [excludedIds, setExcludedIds] = useState<string[]>([]);
+  const [stages, setStages] = useState<Record<string, string>>({});
+  const [memos, setMemos] = useState<Record<string, string>>({});
+  const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
+  const [view, setView] = useState<'table' | 'kanban'>('table');
 
-type PrewarmStage = 'none' | 'day1' | 'day2' | 'day3';
+  // フィルター
+  const [query, setQuery] = useState('');
+  const [genre, setGenre] = useState('all');
+  const [prefecture, setPrefecture] = useState('all');
+  const [stageFilter, setStageFilter] = useState<Stage | 'all'>('all');
+  const [showExcluded, setShowExcluded] = useState(false);
 
-interface QueueLead extends Lead {
-  prewarm: PrewarmStage;
-}
+  // UI
+  const [toast, setToast] = useState<{ msg: string; leadId?: string } | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
+  const [memoDraft, setMemoDraft] = useState('');
+  const [showTemplate, setShowTemplate] = useState(false);
+  const [templateDraft, setTemplateDraft] = useState(DEFAULT_TEMPLATE);
+  const [dragId, setDragId] = useState<string | null>(null);
 
-export default function SalesModePage() {
-  // ── State ──
-  const [queue, setQueue] = useState<QueueLead[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [generatedDM, setGeneratedDM] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [todaySent, setTodaySent] = useState(0);
-  const [maxDaily, setMaxDaily] = useState(25);
-
-  // Quick add
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [quickInstagramId, setQuickInstagramId] = useState('');
-  const [quickStoreName, setQuickStoreName] = useState('');
-  const [quickBusinessType, setQuickBusinessType] = useState('カフェ');
-  const [quickProfileText, setQuickProfileText] = useState('');
-
-  // Toast
-  const [toast, setToast] = useState<string | null>(null);
-
-  // Template editing
-  const [dmTemplate, setDmTemplate] = useState<string>(DEFAULT_DM_TEMPLATE);
-  const [showEditTemplateModal, setShowEditTemplateModal] = useState(false);
-  const [templateDraft, setTemplateDraft] = useState<string>(DEFAULT_DM_TEMPLATE);
-
-  // ── Load ──
+  // ── 読み込み ──
   useEffect(() => {
-    loadQueue();
-    // LocalStorageから定型文を読み込み
+    setExcludedIds(readJSON<string[]>(KEY_EXCLUDED, []));
+    setStages(readJSON<Record<string, string>>(KEY_STATUSES, {}));
+    setMemos(readJSON<Record<string, string>>(KEY_NOTES, {}));
     try {
-      const saved = localStorage.getItem('soystories_fixed_dm_template');
-      if (saved) {
-        setDmTemplate(saved);
-        setTemplateDraft(saved);
-      }
-    } catch (e) {
-      console.warn('LocalStorage error:', e);
-    }
+      const t = localStorage.getItem(KEY_TEMPLATE);
+      if (t) { setTemplate(t); setTemplateDraft(t); }
+      const v = localStorage.getItem(KEY_VIEW);
+      if (v === 'table' || v === 'kanban') setView(v);
+    } catch { /* noop */ }
+
+    (async () => {
+      let combined = [...mockLeads];
+      try {
+        const { supabase, isSupabaseConfigured } = await import('@/lib/supabase');
+        if (isSupabaseConfigured()) {
+          const { data } = await supabase.from('leads').select('*');
+          if (data && data.length > 0) {
+            const masterIds = new Set(mockLeads.map(m => m.instagram_id.toLowerCase()));
+            const extra = (data as Lead[]).filter(d => d.instagram_id && !masterIds.has(d.instagram_id.toLowerCase()));
+            combined = [...extra, ...combined];
+          }
+        }
+      } catch { /* マスターのみで動作 */ }
+      setLeads(combined.map(l => ({ ...l, name: l.name || l.display_name || l.instagram_id })));
+    })();
   }, []);
 
   useEffect(() => {
-    if (toast) {
-      const t = setTimeout(() => setToast(null), 2000);
-      return () => clearTimeout(t);
-    }
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
   }, [toast]);
 
-  // Set fixed DM when current lead or template changes
-  useEffect(() => {
-    const lead = queue[currentIndex];
-    if (lead) {
-      setGeneratedDM(formatDM(dmTemplate, lead));
-      setCopied(false);
-    }
-  }, [currentIndex, queue, dmTemplate]);
+  const stageOf = useCallback(
+    (lead: Lead): Stage => normalizeStage(stages[lead.id] ?? lead.status),
+    [stages],
+  );
 
-  const handleSaveTemplate = () => {
-    setDmTemplate(templateDraft);
-    try {
-      localStorage.setItem('soystories_fixed_dm_template', templateDraft);
-    } catch (e) {
-      console.warn('LocalStorage save error:', e);
-    }
-    setShowEditTemplateModal(false);
-    setToast('💾 定型文を保存しました！すべてのリードに反映されます');
+  // ── 更新系 ──
+  const setStage = (id: string, stage: Stage) => {
+    const next = { ...stages, [id]: stage };
+    setStages(next);
+    writeJSON(KEY_STATUSES, next);
   };
 
-  const handleResetTemplate = () => {
-    setTemplateDraft(DEFAULT_DM_TEMPLATE);
-    setDmTemplate(DEFAULT_DM_TEMPLATE);
-    try {
-      localStorage.removeItem('soystories_fixed_dm_template');
-    } catch (e) {
-      console.warn('LocalStorage remove error:', e);
-    }
-    setShowEditTemplateModal(false);
-    setToast('🔄 初期定型文に戻しました');
+  const toggleExclude = (lead: Lead) => {
+    const isEx = excludedIds.includes(lead.id);
+    const next = isEx ? excludedIds.filter(i => i !== lead.id) : [...excludedIds, lead.id];
+    setExcludedIds(next);
+    writeJSON(KEY_EXCLUDED, next);
+    setToast({ msg: isEx ? `「${lead.name}」を戻しました` : `「${lead.name}」を除外しました` });
   };
 
-  const loadQueue = async () => {
-    let combinedLeads = [...mockLeads];
-    if (isSupabaseConfigured()) {
-      try {
-        const { data } = await supabase
-          .from('leads')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (data && data.length > 0) {
-          const dbLeadsMap = new Map<string, Lead>();
-          const customDbLeads: Lead[] = [];
-
-          data.forEach((item: Lead) => {
-            if (item.instagram_id) {
-              dbLeadsMap.set(item.instagram_id.toLowerCase(), item);
-            }
-          });
-
-          combinedLeads = mockLeads.map(masterLead => {
-            const dbMatch = dbLeadsMap.get(masterLead.instagram_id.toLowerCase());
-            if (dbMatch) {
-              return {
-                ...masterLead,
-                status: dbMatch.status || masterLead.status,
-                notes: dbMatch.notes || masterLead.notes,
-              };
-            }
-            return masterLead;
-          });
-
-          const masterIgIds = new Set(mockLeads.map(m => m.instagram_id.toLowerCase()));
-          data.forEach((item: Lead) => {
-            if (item.instagram_id && !masterIgIds.has(item.instagram_id.toLowerCase())) {
-              customDbLeads.push(item);
-            }
-          });
-
-          combinedLeads = [...customDbLeads, ...combinedLeads];
-        }
-      } catch (e) { console.warn(e); }
-    }
-
-    // 新規またはDM下書き対象のみ
-    let activeLeads = combinedLeads.filter(l => l.status === 'new' || l.status === 'dm_drafted');
-
-    // 除外リストにある店舗をキューから除外
-    let excludedIds: string[] = [];
-    try {
-      const saved = localStorage.getItem('soystories_excluded_restaurant_ids_v1');
-      if (saved) excludedIds = JSON.parse(saved);
-    } catch (e) {
-      console.warn(e);
-    }
-
-    const filtered = activeLeads.filter(l => !excludedIds.includes(l.id));
-
-    const queueLeads: QueueLead[] = filtered.map(l => ({
-      ...l,
-      prewarm: ((l as any).prewarm_stage as PrewarmStage) || 'none',
-    }));
-
-    setQueue(queueLeads);
-    setCurrentIndex(0);
+  const saveMemo = (id: string) => {
+    const next = { ...memos, [id]: memoDraft.trim() };
+    if (!memoDraft.trim()) delete next[id];
+    setMemos(next);
+    writeJSON(KEY_NOTES, next);
+    setEditingMemoId(null);
   };
 
-  // ── Actions ──
-  const currentLead = queue[currentIndex];
-  const remaining = maxDaily - todaySent;
-
-  const handleCopyAndSend = useCallback(async () => {
-    if (!generatedDM || !currentLead) return;
-
-    // Copy to clipboard
-    await navigator.clipboard.writeText(generatedDM);
-    setCopied(true);
-    setToast('📋 コピーしました！Instagramに切り替えて貼り付けてください');
-
-    // Update status
-    if (isSupabaseConfigured()) {
-      try {
-        await supabase.from('leads').update({ status: 'dm_sent' }).eq('id', currentLead.id);
-      } catch (e) { console.warn(e); }
+  const copyDM = async (lead: Lead) => {
+    try {
+      await navigator.clipboard.writeText(buildDM(template, lead));
+      setCopiedId(lead.id);
+      setTimeout(() => setCopiedId(null), 1500);
+      setToast(
+        stageOf(lead) === 'new'
+          ? { msg: `DM文をコピーしました（${lead.name}）`, leadId: lead.id }
+          : { msg: `DM文をコピーしました（${lead.name}）` },
+      );
+    } catch {
+      setToast({ msg: 'コピーに失敗しました' });
     }
+  };
 
-    setTodaySent(prev => prev + 1);
+  const saveTemplate = () => {
+    setTemplate(templateDraft);
+    writeJSON(KEY_TEMPLATE, templateDraft);
+    setShowTemplate(false);
+    setToast({ msg: 'DM定型文を保存しました' });
+  };
 
-    // Auto-advance after 1.5s
-    setTimeout(() => {
-      setCopied(false);
-      if (currentIndex < queue.length - 1) {
-        setCurrentIndex(prev => prev + 1);
+  const changeView = (v: 'table' | 'kanban') => {
+    setView(v);
+    writeJSON(KEY_VIEW, v);
+  };
+
+  // ── 集計・絞り込み ──
+  const activeLeads = useMemo(() => leads.filter(l => !excludedIds.includes(l.id)), [leads, excludedIds]);
+
+  const genres = useMemo(
+    () => Array.from(new Set(leads.map(l => l.genre || l.business_type).filter(Boolean))) as string[],
+    [leads],
+  );
+  const prefectures = useMemo(() => {
+    const count: Record<string, number> = {};
+    leads.forEach(l => { if (l.prefecture) count[l.prefecture] = (count[l.prefecture] || 0) + 1; });
+    return Object.entries(count).sort((a, b) => b[1] - a[1]).map(([p]) => p);
+  }, [leads]);
+
+  const stageCounts = useMemo(() => {
+    const c = Object.fromEntries(STAGES.map(s => [s.key, 0])) as Record<Stage, number>;
+    activeLeads.forEach(l => { c[stageOf(l)]++; });
+    return c;
+  }, [activeLeads, stageOf]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (showExcluded ? leads.filter(l => excludedIds.includes(l.id)) : activeLeads).filter(l => {
+      if (genre !== 'all' && (l.genre || l.business_type) !== genre) return false;
+      if (prefecture !== 'all' && l.prefecture !== prefecture) return false;
+      if (!showExcluded && view === 'table' && stageFilter !== 'all' && stageOf(l) !== stageFilter) return false;
+      if (q) {
+        const hay = `${l.name} ${l.instagram_id} ${l.area ?? ''} ${memos[l.id] ?? ''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
       }
-    }, 1500);
-  }, [generatedDM, currentLead, currentIndex, queue.length]);
+      return true;
+    });
+  }, [leads, activeLeads, excludedIds, showExcluded, genre, prefecture, stageFilter, query, view, stageOf, memos]);
 
-  const handleSkip = () => {
-    if (currentIndex < queue.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-    }
-  };
+  const total = activeLeads.length;
+  const touched = total - stageCounts.new;
 
-  const handlePrewarmAdvance = async () => {
-    if (!currentLead) return;
-    const nextStage: Record<PrewarmStage, PrewarmStage> = {
-      'none': 'day1',
-      'day1': 'day2',
-      'day2': 'day3',
-      'day3': 'day3',
-    };
-    const next = nextStage[currentLead.prewarm];
-    const labels: Record<PrewarmStage, string> = {
-      'none': '',
-      'day1': '👍 いいね完了！明日コメントしましょう',
-      'day2': '💬 コメント完了！明日DMを送りましょう',
-      'day3': '✅ プレウォーム完了！DMを送れます',
-    };
-
-    setQueue(prev => prev.map((l, i) => i === currentIndex ? { ...l, prewarm: next } : l));
-    if (labels[next]) setToast(labels[next]);
-
-    if (isSupabaseConfigured()) {
-      try {
-        await supabase.from('leads').update({ prewarm_stage: next }).eq('id', currentLead.id);
-      } catch (e) { console.warn(e); }
-    }
-  };
-
-  const handleQuickAdd = async () => {
-    if (!quickInstagramId.trim()) return;
-
-    const id = quickInstagramId.startsWith('@') ? quickInstagramId : `@${quickInstagramId}`;
-    const newLead: Partial<Lead> = {
-      instagram_id: id,
-      display_name: quickStoreName || id.replace('@', ''),
-      business_type: quickBusinessType,
-      profile_text: quickProfileText,
-      status: 'new' as any,
-    };
-
-    if (isSupabaseConfigured()) {
-      try {
-        const { data } = await supabase.from('leads').insert([newLead]).select().single();
-        if (data) {
-          const newQueueLead: QueueLead = {
-            ...(data as Lead),
-            prewarm: 'none',
-          };
-          setQueue(prev => [newQueueLead, ...prev]);
-          setCurrentIndex(0);
-        }
-      } catch (e) { console.warn(e); }
-    } else {
-      const fakeId = `lead-${Date.now()}`;
-      const fakeLead: QueueLead = {
-        ...newLead,
-        id: fakeId,
-        instagram_id: id,
-        name: quickStoreName || null,
-        display_name: quickStoreName || id.replace('@', ''),
-        business_type: quickBusinessType,
-        profile_text: quickProfileText || null,
-        status: 'new' as any,
-        followers_count: null,
-        website_url: null,
-        tags: [],
-        notes: null,
-        created_at: new Date().toISOString(),
-        prewarm: 'none',
-      } as QueueLead;
-      setQueue(prev => [fakeLead, ...prev]);
-      setCurrentIndex(0);
-    }
-
-    setQuickInstagramId('');
-    setQuickStoreName('');
-    setQuickProfileText('');
-    setShowQuickAdd(false);
-    setToast('✅ リードを追加しました');
-  };
-
-  // ── Keyboard Shortcut ──
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.key === 'c' || e.key === 'C') { e.preventDefault(); handleCopyAndSend(); }
-      if (e.key === 's' || e.key === 'S') { e.preventDefault(); handleSkip(); }
-      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); setShowQuickAdd(true); }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [handleCopyAndSend]);
-
-  // ── Pacing bar color ──
-  const pacingPct = (todaySent / maxDaily) * 100;
-  const pacingColor = pacingPct >= 90 ? 'bg-red-500' : pacingPct >= 70 ? 'bg-amber-500' : 'bg-emerald-500';
-
-  const prewarmLabel: Record<PrewarmStage, { text: string; color: string; icon: React.ReactNode }> = {
-    'none': { text: '未開始', color: 'bg-gray-100 text-gray-500', icon: <Clock className="w-3.5 h-3.5" /> },
-    'day1': { text: 'Day1 いいね済', color: 'bg-blue-100 text-blue-600', icon: <Heart className="w-3.5 h-3.5" /> },
-    'day2': { text: 'Day2 コメント済', color: 'bg-purple-100 text-purple-600', icon: <MessageCircle className="w-3.5 h-3.5" /> },
-    'day3': { text: 'Day3 DM可能', color: 'bg-emerald-100 text-emerald-700', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-  };
-
+  // ============================================================
   return (
-    <div className="max-w-5xl mx-auto">
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Zap className="w-6 h-6 text-amber-500" />
-            営業モード
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Instagramタブと行き来しながら、最速でDM営業を回すモード
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/discover"
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition text-sm font-semibold"
-          >
-            <Sparkles className="w-4 h-4 text-emerald-600" />
-            AIで店舗を自動収集
-          </Link>
-          <button
-            onClick={() => setShowQuickAdd(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            クイック追加 <kbd className="ml-1 text-xs bg-emerald-700 px-1 rounded">N</kbd>
-          </button>
-        </div>
-      </div>
-
-      {/* ── Pacing Bar ── */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6 shadow-sm">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">
-            本日の送信: <span className="text-lg font-bold">{todaySent}</span> / {maxDaily}件
-          </span>
-          <span className="text-sm text-gray-500">
-            残り <span className={`font-bold ${remaining <= 5 ? 'text-red-500' : 'text-emerald-600'}`}>{remaining}</span> 件送信可能
-          </span>
-        </div>
-        <div className="w-full bg-gray-100 rounded-full h-2.5">
-          <div className={`h-2.5 rounded-full transition-all duration-500 ${pacingColor}`} style={{ width: `${Math.min(pacingPct, 100)}%` }} />
-        </div>
-        {remaining <= 5 && (
-          <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            上限に近づいています。BAN回避のため今日はここまでにしましょう。
-          </p>
-        )}
-      </div>
-
-      {/* ── Main Card: Current Lead ── */}
-      {currentLead ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          {/* Lead info header */}
-          <div className="p-6 border-b border-gray-50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                {/* Avatar */}
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400 flex items-center justify-center text-white">
-                  <AtSign className="w-7 h-7" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-gray-800">
-                      {currentLead.display_name || currentLead.name || currentLead.instagram_id}
-                    </h2>
-                    <a
-                      href={`https://www.instagram.com/${currentLead.instagram_id.replace('@', '')}/`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:text-blue-600 transition"
-                      title="Instagramを開く"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                  </div>
-                  <p className="text-sm text-gray-500">{currentLead.instagram_id}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5">
-                {/* Genre badge */}
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                  {currentLead.genre || currentLead.business_type || 'ヴィーガン飲食店'}
-                </span>
-                {/* Area badge */}
-                {currentLead.area && (
-                  <span className="px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-700 font-semibold">
-                    📍 {currentLead.area}
-                  </span>
-                )}
-                {/* Prewarm */}
-                <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${prewarmLabel[currentLead.prewarm].color}`}>
-                  {prewarmLabel[currentLead.prewarm].icon}
-                  {prewarmLabel[currentLead.prewarm].text}
-                </span>
-              </div>
-            </div>
-
-            {/* Profile text */}
-            {currentLead.profile_text && (
-              <p className="mt-3 text-sm text-gray-600 bg-gray-50 rounded-lg p-3 leading-relaxed">
-                {currentLead.profile_text}
-              </p>
-            )}
-
-            {/* Prewarm action */}
-            {currentLead.prewarm !== 'day3' && (
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  onClick={handlePrewarmAdvance}
-                  className="text-sm px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition font-medium"
-                >
-                  {currentLead.prewarm === 'none' && '👍 いいね完了にする'}
-                  {currentLead.prewarm === 'day1' && '💬 コメント完了にする'}
-                  {currentLead.prewarm === 'day2' && '✅ プレウォーム完了'}
-                </button>
-                <span className="text-xs text-gray-400">
-                  {currentLead.prewarm === 'none' && '→ まず投稿にいいねしましょう'}
-                  {currentLead.prewarm === 'day1' && '→ 次は投稿にコメントしましょう'}
-                  {currentLead.prewarm === 'day2' && '→ 明日DMを送りましょう'}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Fixed DM Text */}
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                送信DM（固定定型文）
-              </span>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-400 font-medium">{generatedDM.length}文字</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTemplateDraft(dmTemplate);
-                    setShowEditTemplateModal(true);
-                  }}
-                  className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 font-semibold transition"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  定型文を編集・保存
-                </button>
-              </div>
-            </div>
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-100 p-5 shadow-inner">
-              <pre className="text-sm text-gray-800 whitespace-pre-wrap font-sans leading-relaxed">
-                {generatedDM}
-              </pre>
-            </div>
-          </div>
-
-          {/* Action buttons */}
-          <div className="px-6 pb-6 flex gap-3">
+    <div className="min-h-screen bg-slate-50/70 text-slate-900 flex flex-col">
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-3">
+          <span>{toast.msg}</span>
+          {toast.leadId && (
             <button
-              onClick={handleCopyAndSend}
-              disabled={copied}
-              className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl text-lg font-bold transition ${
-                copied
-                  ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-300'
-                  : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-200'
-              }`}
+              onClick={() => { setStage(toast.leadId!, 'dm_sent'); setToast({ msg: '「DM送信済」に移動しました' }); }}
+              className="bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-lg font-bold cursor-pointer"
             >
-              {copied ? (
-                <>
-                  <Check className="w-6 h-6" />
-                  コピー済み！Instagramへ →
-                </>
-              ) : (
-                <>
-                  <Copy className="w-5 h-5" />
-                  コピー＆送信済みにする
-                  <kbd className="ml-2 text-sm bg-emerald-600 px-1.5 py-0.5 rounded">C</kbd>
-                </>
-              )}
+              DM送信済にする
             </button>
-
-            <button
-              onClick={handleSkip}
-              className="px-6 py-4 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition font-medium"
-            >
-              <SkipForward className="w-5 h-5 mx-auto mb-1" />
-              <span className="text-xs">スキップ</span>
-              <kbd className="ml-1 text-xs bg-gray-200 px-1 rounded">S</kbd>
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
-          <Send className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-400">キューが空です</h2>
-          <p className="text-sm text-gray-400 mt-2">「クイック追加」でリードを追加してください</p>
+          )}
         </div>
       )}
 
-      {/* ── Queue preview ── */}
-      {queue.length > 1 && (
-        <div className="mt-6">
-          <h3 className="text-sm font-medium text-gray-500 mb-3">
-            次のターゲット（{queue.length - currentIndex - 1}件）
-          </h3>
-          <div className="space-y-2">
-            {queue.slice(currentIndex + 1, currentIndex + 4).map((lead, i) => (
+      {/* Header */}
+      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200 px-4 sm:px-6 py-3">
+        <div className="max-w-[1400px] mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center" title="TOPへ">
+              <ArrowLeft className="w-4 h-4 text-slate-600" />
+            </Link>
+            <div>
+              <h1 className="text-base font-bold leading-tight">営業ボード</h1>
+              <p className="text-[11px] text-slate-500">ヴィーガン飲食店 {total}件 ・ 着手済み {touched}件</p>
+            </div>
+          </div>
+          <button
+            onClick={() => { setTemplateDraft(template); setShowTemplate(true); }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            DM定型文
+          </button>
+        </div>
+      </header>
+
+      <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
+        {/* 進捗サマリー（クリックで絞り込み） */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <div className="flex h-2 rounded-full overflow-hidden bg-slate-100 mb-3">
+            {STAGES.map(s => stageCounts[s.key] > 0 && (
+              <div key={s.key} className={s.dot} style={{ width: `${(stageCounts[s.key] / Math.max(total, 1)) * 100}%` }} />
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => { setStageFilter('all'); setShowExcluded(false); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${stageFilter === 'all' && !showExcluded ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+            >
+              すべて {total}
+            </button>
+            {STAGES.map(s => (
               <button
-                key={lead.id}
-                onClick={() => setCurrentIndex(currentIndex + 1 + i)}
-                className="w-full flex items-center justify-between bg-white rounded-xl border border-gray-100 px-4 py-3 hover:bg-gray-50 transition text-left"
+                key={s.key}
+                onClick={() => { setStageFilter(s.key); setShowExcluded(false); changeView('table'); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${stageFilter === s.key && !showExcluded ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-gray-700">
-                    {lead.display_name || lead.name || lead.instagram_id}
-                  </span>
-                  <span className="text-xs text-gray-400">{lead.instagram_id}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${prewarmLabel[lead.prewarm].color}`}>
-                    {prewarmLabel[lead.prewarm].text}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-gray-100 text-gray-700">
-                    {lead.genre || lead.business_type || 'ヴィーガン'}
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-gray-300" />
-                </div>
+                <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+                {s.label} {stageCounts[s.key]}
               </button>
             ))}
           </div>
         </div>
-      )}
 
-      {/* ── Keyboard shortcuts help ── */}
-      <div className="mt-8 text-center text-xs text-gray-400 flex items-center justify-center gap-6">
-        <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">C</kbd> コピー＆送信済み</span>
-        <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">S</kbd> スキップ</span>
-        <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">N</kbd> クイック追加</span>
-      </div>
+        {/* ツールバー */}
+        <div className="flex flex-col md:flex-row md:items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="店名・Instagram ID・エリア・メモで検索"
+              className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:border-slate-400"
+            />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <select value={genre} onChange={e => setGenre(e.target.value)} className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm">
+              <option value="all">全ジャンル</option>
+              {genres.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+            <select value={prefecture} onChange={e => setPrefecture(e.target.value)} className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm">
+              <option value="all">全地域</option>
+              {prefectures.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <button
+              onClick={() => setShowExcluded(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm cursor-pointer ${showExcluded ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-white border-slate-200 text-slate-600'}`}
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+              除外済み {excludedIds.length}
+            </button>
+            <div className="flex rounded-lg border border-slate-200 bg-white p-0.5">
+              <button
+                onClick={() => changeView('table')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer ${view === 'table' ? 'bg-slate-900 text-white' : 'text-slate-600'}`}
+              >
+                <Table2 className="w-3.5 h-3.5" />一覧表
+              </button>
+              <button
+                onClick={() => changeView('kanban')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer ${view === 'kanban' ? 'bg-slate-900 text-white' : 'text-slate-600'}`}
+              >
+                <Columns3 className="w-3.5 h-3.5" />看板
+              </button>
+            </div>
+          </div>
+        </div>
 
-      {/* ── Quick Add Modal ── */}
-      {showQuickAdd && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowQuickAdd(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-emerald-500" />
-              クイック追加
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium text-gray-600">Instagram ID <span className="text-red-400">*</span></label>
-                <input
-                  type="text"
-                  value={quickInstagramId}
-                  onChange={e => setQuickInstagramId(e.target.value)}
-                  placeholder="@cafe_name"
-                  className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 outline-none"
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">店名</label>
-                <input
-                  type="text"
-                  value={quickStoreName}
-                  onChange={e => setQuickStoreName(e.target.value)}
-                  placeholder="例: NICE plant-based cafe"
-                  className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 outline-none"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">業種</label>
-                <select
-                  value={quickBusinessType}
-                  onChange={e => setQuickBusinessType(e.target.value)}
-                  className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 outline-none"
+        <p className="text-xs text-slate-500">{filtered.length}件を表示中</p>
+
+        {/* ===================== 一覧表 ===================== */}
+        {(view === 'table' || showExcluded) && (
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="overflow-auto max-h-[70vh]">
+              <table className="w-full text-sm min-w-[900px]">
+                <thead className="sticky top-0 bg-slate-50 z-10">
+                  <tr className="text-left text-[11px] text-slate-500 border-b border-slate-200">
+                    <th className="px-4 py-2.5 font-semibold">店名</th>
+                    <th className="px-3 py-2.5 font-semibold">ジャンル</th>
+                    <th className="px-3 py-2.5 font-semibold">地域</th>
+                    <th className="px-3 py-2.5 font-semibold w-36">ステータス</th>
+                    <th className="px-3 py-2.5 font-semibold">メモ</th>
+                    <th className="px-3 py-2.5 font-semibold text-right w-48">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map(lead => {
+                    const st = stageOf(lead);
+                    const isEx = excludedIds.includes(lead.id);
+                    return (
+                      <tr key={lead.id} className="hover:bg-slate-50/60 align-top">
+                        <td className="px-4 py-2.5">
+                          <div className="font-semibold text-slate-900">{lead.name}</div>
+                          {lead.instagram_url && (
+                            <a href={lead.instagram_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-slate-500 hover:text-slate-900 inline-flex items-center gap-1">
+                              {lead.instagram_id}<ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{lead.genre || lead.business_type}</td>
+                        <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">
+                          {lead.prefecture}
+                          {lead.area && <div className="text-[11px] text-slate-400">{lead.area}</div>}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <select
+                            value={st}
+                            disabled={isEx}
+                            onChange={e => setStage(lead.id, e.target.value as Stage)}
+                            className={`w-full px-2 py-1 rounded-md text-xs font-semibold border-0 cursor-pointer ${STAGE_MAP[st].chip}`}
+                          >
+                            {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2.5 min-w-[200px]">
+                          {editingMemoId === lead.id ? (
+                            <div className="flex gap-1">
+                              <input
+                                autoFocus
+                                value={memoDraft}
+                                onChange={e => setMemoDraft(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') saveMemo(lead.id); if (e.key === 'Escape') setEditingMemoId(null); }}
+                                onBlur={() => saveMemo(lead.id)}
+                                className="flex-1 px-2 py-1 text-xs border border-slate-300 rounded-md focus:outline-none"
+                              />
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => { setEditingMemoId(lead.id); setMemoDraft(memos[lead.id] || ''); }}
+                              className="text-left text-xs w-full text-slate-600 hover:bg-slate-100 rounded px-1.5 py-1 cursor-text"
+                            >
+                              {memos[lead.id] || <span className="text-slate-300">メモを追加</span>}
+                            </button>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex justify-end gap-1.5">
+                            {!isEx && (
+                              <button
+                                onClick={() => copyDM(lead)}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer"
+                              >
+                                {copiedId === lead.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                DMコピー
+                              </button>
+                            )}
+                            <button
+                              onClick={() => toggleExclude(lead)}
+                              title={isEx ? '戻す' : '除外'}
+                              className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-slate-200 text-slate-500 hover:text-slate-900 text-xs cursor-pointer"
+                            >
+                              {isEx ? <><RotateCcw className="w-3.5 h-3.5" />戻す</> : <EyeOff className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filtered.length === 0 && (
+                    <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-slate-400">該当する店舗はありません</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ===================== 看板 ===================== */}
+        {view === 'kanban' && !showExcluded && (
+          <div className="flex gap-3 overflow-x-auto pb-4">
+            {STAGES.map(s => {
+              const items = filtered.filter(l => stageOf(l) === s.key);
+              return (
+                <div
+                  key={s.key}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={() => { if (dragId) setStage(dragId, s.key); setDragId(null); }}
+                  className="w-64 shrink-0 bg-slate-100/70 rounded-2xl p-2 flex flex-col max-h-[72vh]"
                 >
-                  {['カフェ', 'レストラン', 'ベーカリー', 'ホテル', 'デリ', 'バー', 'その他'].map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
+                  <div className="flex items-center justify-between px-2 py-1.5">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                      <span className={`w-2 h-2 rounded-full ${s.dot}`} />{s.label}
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-semibold">{items.length}</span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto space-y-2 px-0.5 pb-1">
+                    {items.map(lead => (
+                      <div
+                        key={lead.id}
+                        draggable
+                        onDragStart={() => setDragId(lead.id)}
+                        onDragEnd={() => setDragId(null)}
+                        className={`bg-white rounded-xl border border-slate-200 p-3 shadow-2xs cursor-grab active:cursor-grabbing ${dragId === lead.id ? 'opacity-50' : ''}`}
+                      >
+                        <div className="text-sm font-semibold text-slate-900 leading-snug">{lead.name}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          {lead.genre || lead.business_type} ・ {lead.prefecture}
+                        </div>
+                        {memos[lead.id] && (
+                          <div className="text-[11px] text-slate-600 bg-slate-50 rounded-md px-2 py-1 mt-2 line-clamp-2">{memos[lead.id]}</div>
+                        )}
+                        <div className="flex items-center gap-1.5 mt-2.5">
+                          <button
+                            onClick={() => copyDM(lead)}
+                            className="flex items-center gap-1 px-2 py-1 rounded-md bg-slate-900 text-white text-[11px] font-semibold cursor-pointer"
+                          >
+                            {copiedId === lead.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}DM
+                          </button>
+                          {lead.instagram_url && (
+                            <a href={lead.instagram_url} target="_blank" rel="noopener noreferrer" className="p-1 rounded-md border border-slate-200 text-slate-500 hover:text-slate-900">
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                          {/* スマホ向け：ドラッグできない端末でも移動可能 */}
+                          <select
+                            value={s.key}
+                            onChange={e => setStage(lead.id, e.target.value as Stage)}
+                            className="ml-auto text-[11px] bg-slate-50 border border-slate-200 rounded-md px-1 py-0.5 cursor-pointer"
+                          >
+                            {STAGES.map(x => <option key={x.key} value={x.key}>{x.label}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                    {items.length === 0 && (
+                      <div className="text-center text-[11px] text-slate-400 py-6 border-2 border-dashed border-slate-200 rounded-xl">ここにドラッグ</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+
+      {/* ===================== DM定型文 ===================== */}
+      {showTemplate && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowTemplate(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div>
-                <label className="text-sm font-medium text-gray-600">プロフィール（任意）</label>
+                <h2 className="text-sm font-bold">DM定型文</h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  <code className="bg-slate-100 px-1 rounded">{'{{店名}}'}</code> と書いた箇所に各店舗名が自動で入ります
+                </p>
+              </div>
+              <button onClick={() => setShowTemplate(false)} className="p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4 p-5">
+              <div>
+                <div className="text-[11px] font-semibold text-slate-500 mb-1.5">本文</div>
                 <textarea
-                  value={quickProfileText}
-                  onChange={e => setQuickProfileText(e.target.value)}
-                  placeholder="Instagramのプロフィールをコピペ"
-                  rows={2}
-                  className="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 outline-none resize-none"
+                  value={templateDraft}
+                  onChange={e => setTemplateDraft(e.target.value)}
+                  rows={14}
+                  className="w-full text-sm leading-relaxed p-3 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-400 resize-y"
                 />
+                <div className="text-[11px] text-slate-400 mt-1">{templateDraft.length}文字</div>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold text-slate-500 mb-1.5">
+                  プレビュー（{activeLeads[0]?.name ?? '店舗名'}）
+                </div>
+                <div className="text-sm leading-relaxed p-3 rounded-xl bg-slate-50 border border-slate-100 whitespace-pre-wrap min-h-[300px]">
+                  {activeLeads[0] ? buildDM(templateDraft, activeLeads[0]) : templateDraft}
+                </div>
               </div>
             </div>
-            <div className="flex gap-2 mt-5">
+            <div className="flex items-center justify-between px-5 py-4 border-t border-slate-100">
               <button
-                onClick={handleQuickAdd}
-                disabled={!quickInstagramId.trim()}
-                className="flex-1 py-2.5 bg-emerald-500 text-white rounded-lg font-medium hover:bg-emerald-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setTemplateDraft(DEFAULT_TEMPLATE)}
+                className="text-xs text-slate-500 hover:text-slate-900 cursor-pointer"
               >
-                追加してDM準備
+                初期の文章に戻す
               </button>
               <button
-                onClick={() => setShowQuickAdd(false)}
-                className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition"
+                onClick={saveTemplate}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
               >
-                キャンセル
+                <Save className="w-3.5 h-3.5" />保存
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* ── Edit Template Modal ── */}
-      {showEditTemplateModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setShowEditTemplateModal(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl p-6 sm:p-8 space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                  <Edit3 className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-gray-800">
-                    固定DM定型文の編集・保存
-                  </h3>
-                  <p className="text-xs text-gray-400">
-                    ここで保存した文章が、今後すべての見込み客への送信DMとして自動適用されます
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowEditTemplateModal(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-gray-700">DM本文テンプレート:</span>
-                <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-mono text-[11px]">
-                  変数: {'{{name}}'} = 〇〇様
-                </span>
-              </div>
-              <textarea
-                value={templateDraft}
-                onChange={e => setTemplateDraft(e.target.value)}
-                rows={8}
-                className="w-full p-4 border border-gray-200 rounded-2xl text-sm leading-relaxed text-gray-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none font-sans"
-                placeholder="DMの定型文を入力してください..."
-              />
-              <div className="flex items-center justify-between text-xs text-gray-400 px-1">
-                <span>文字数: {templateDraft.length}文字</span>
-                <span>※Instagramで最も読まれやすい150〜200文字以内を推奨</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={handleResetTemplate}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                初期文面に戻す
-              </button>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowEditTemplateModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition"
-                >
-                  キャンセル
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveTemplate}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition active:scale-95"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  保存して全リードに適用
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {toast && (
-        <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg text-sm z-50 animate-in fade-in slide-in-from-bottom-4">
-          {toast}
         </div>
       )}
     </div>
