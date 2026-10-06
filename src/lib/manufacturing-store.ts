@@ -11,358 +11,60 @@ import {
 } from '@/types/manufacturing';
 
 // -------------------------------------------------------------
-// デフォルト商品マスタ（1L 業務用バルクパック中心）
+// 実運用 商品マスタ（カップアイス プレーン ＆ カカオ）
 // -------------------------------------------------------------
 export const DEFAULT_MANUFACTURING_PRODUCTS: ManufacturingProduct[] = [
   {
-    id: 'prod-vanilla-1l',
-    name: 'ソイプレミアム バニラ (業務用 1L)',
-    flavor: 'バニラ',
-    category: 'ice_cream_1l',
-    sku: 'SOY-1L-VAN',
+    id: 'prod-cup-plain',
+    name: 'プレーンアイス（カップ）',
+    flavor: 'プレーン',
+    category: 'ice_cream_cup',
+    sku: 'SOY-CUP-PLN',
     shelf_life_days: 180,
-    unit: '本 (1000ml)',
+    unit: '個 (100ml)',
   },
   {
-    id: 'prod-cacao-1l',
-    name: 'ソイリッチ カカオ (業務用 1L)',
+    id: 'prod-cup-cacao',
+    name: 'カカオアイス（カップ）',
     flavor: 'カカオ',
-    category: 'ice_cream_1l',
-    sku: 'SOY-1L-CAC',
+    category: 'ice_cream_cup',
+    sku: 'SOY-CUP-CAC',
     shelf_life_days: 180,
-    unit: '本 (1000ml)',
-  },
-  {
-    id: 'prod-matcha-1l',
-    name: '宇治抹茶 ソイアイス (業務用 1L)',
-    flavor: '宇治抹茶',
-    category: 'ice_cream_1l',
-    sku: 'SOY-1L-MAT',
-    shelf_life_days: 180,
-    unit: '本 (1000ml)',
-  },
-  {
-    id: 'prod-strawberry-1l',
-    name: 'あまおう苺 ソイソルベ (業務用 1L)',
-    flavor: 'あまおう苺',
-    category: 'ice_cream_1l',
-    sku: 'SOY-1L-STR',
-    shelf_life_days: 180,
-    unit: '本 (1000ml)',
-  },
-  {
-    id: 'prod-pistachio-1l',
-    name: 'シチリア ピスタチオ (業務用 1L)',
-    flavor: 'ピスタチオ',
-    category: 'ice_cream_1l',
-    sku: 'SOY-1L-PIS',
-    shelf_life_days: 180,
-    unit: '本 (1000ml)',
+    unit: '個 (100ml)',
   },
 ];
 
 // -------------------------------------------------------------
-// デフォルト ロットデータ（WIP、完成品、隔離品）
+// 実運用 納品先初期マスター
 // -------------------------------------------------------------
-export const DEFAULT_LOTS: ManufacturingLot[] = [
-  // 1. 仕掛品（WIP: 内蓋シール未貼付・未検品）★ 出荷画面には絶対に出ない
-  {
-    lot_id: 'LOT-20261006-VAN-01',
-    product_id: 'prod-vanilla-1l',
-    product_name: 'ソイプレミアム バニラ (業務用 1L)',
-    flavor: 'バニラ',
-    manufactured_date: '2026-10-06',
-    expiration_date: '2027-04-04',
-    operator_name: '田中 宏明 (製造部)',
-    planned_quantity: 50,
-    actual_quantity: 50,
-    current_quantity: 50,
-    status: 'WIP', // ★ 仕掛品
-    notes: '午前バッチ充填完了。これから急速凍結およびトップシール工程へ移送。',
-    created_at: '2026-10-06T09:30:00Z',
-  },
-  // 2. 完成品（QA_Passed: 最古ロット → FIFO最優先サジェスト）
-  {
-    lot_id: 'LOT-20260920-VAN-01',
-    product_id: 'prod-vanilla-1l',
-    product_name: 'ソイプレミアム バニラ (業務用 1L)',
-    flavor: 'バニラ',
-    manufactured_date: '2026-09-20',
-    expiration_date: '2027-03-19',
-    operator_name: '佐々木 健一 (製造部)',
-    planned_quantity: 40,
-    actual_quantity: 40,
-    current_quantity: 15, // 出荷済み25本、残り15本
-    status: 'QA_Passed',
-    qa_inspector: '吉田 恵美 (品質管理責任者)',
-    qa_inspected_at: '2026-09-20T16:45:00Z',
-    qa_checklist: {
-      seal_verified: true,
-      label_verified: true,
-      lot_print_verified: true,
-      temp_ccp_verified: true,
-      notes: '内蓋トップシール密着確認済、表示ラベル（大豆）鮮明、CCP-18℃急速凍結完了',
-    },
-    notes: '原料豆乳: 福岡産ふくゆたか使用',
-    created_at: '2026-09-20T11:00:00Z',
-  },
-  // 3. 完成品（QA_Passed: 新しいロット）
-  {
-    lot_id: 'LOT-20261001-VAN-02',
-    product_id: 'prod-vanilla-1l',
-    product_name: 'ソイプレミアム バニラ (業務用 1L)',
-    flavor: 'バニラ',
-    manufactured_date: '2026-10-01',
-    expiration_date: '2027-03-30',
-    operator_name: '田中 宏明 (製造部)',
-    planned_quantity: 30,
-    actual_quantity: 30,
-    current_quantity: 30,
-    status: 'QA_Passed',
-    qa_inspector: '吉田 恵美 (品質管理責任者)',
-    qa_inspected_at: '2026-10-01T17:10:00Z',
-    qa_checklist: {
-      seal_verified: true,
-      label_verified: true,
-      lot_print_verified: true,
-      temp_ccp_verified: true,
-      notes: '全品検品パス、シール浮きなし',
-    },
-    created_at: '2026-10-01T10:15:00Z',
-  },
-  // 4. 完成品（カカオ）
-  {
-    lot_id: 'LOT-20261002-CAC-01',
-    product_id: 'prod-cacao-1l',
-    product_name: 'ソイリッチ カカオ (業務用 1L)',
-    flavor: 'カカオ',
-    manufactured_date: '2026-10-02',
-    expiration_date: '2027-03-31',
-    operator_name: '佐々木 健一 (製造部)',
-    planned_quantity: 45,
-    actual_quantity: 45,
-    current_quantity: 40, // 出荷済み5本、残り40本
-    status: 'QA_Passed',
-    qa_inspector: '吉田 恵美 (品質管理責任者)',
-    qa_inspected_at: '2026-10-02T16:30:00Z',
-    qa_checklist: {
-      seal_verified: true,
-      label_verified: true,
-      lot_print_verified: true,
-      temp_ccp_verified: true,
-      notes: 'カカオパウダー攪拌均一確認、CCPクリア',
-    },
-    created_at: '2026-10-02T09:00:00Z',
-  },
-  // 5. 完成品（抹茶）
-  {
-    lot_id: 'LOT-20261004-MAT-01',
-    product_id: 'prod-matcha-1l',
-    product_name: '宇治抹茶 ソイアイス (業務用 1L)',
-    flavor: '宇治抹茶',
-    manufactured_date: '2026-10-04',
-    expiration_date: '2027-04-02',
-    operator_name: '田中 宏明 (製造部)',
-    planned_quantity: 25,
-    actual_quantity: 25,
-    current_quantity: 25,
-    status: 'QA_Passed',
-    qa_inspector: '吉田 恵美 (品質管理責任者)',
-    qa_inspected_at: '2026-10-04T15:20:00Z',
-    qa_checklist: {
-      seal_verified: true,
-      label_verified: true,
-      lot_print_verified: true,
-      temp_ccp_verified: true,
-      notes: '京都宇治産有機抹茶使用、検品完了',
-    },
-    created_at: '2026-10-04T10:00:00Z',
-  },
-  // 6. 隔離保留品（Quarantined）
-  {
-    lot_id: 'LOT-20260928-STR-01',
-    product_id: 'prod-strawberry-1l',
-    product_name: 'あまおう苺 ソイソルベ (業務用 1L)',
-    flavor: 'あまおう苺',
-    manufactured_date: '2026-09-28',
-    expiration_date: '2027-03-27',
-    operator_name: '佐々木 健一 (製造部)',
-    planned_quantity: 10,
-    actual_quantity: 10,
-    current_quantity: 10,
-    status: 'Quarantined',
-    qa_inspector: '吉田 恵美 (品質管理責任者)',
-    qa_inspected_at: '2026-09-28T18:00:00Z',
-    quarantine_reason: '内蓋トップシールの圧着温度CCPに一時的なブレがあったため、隔離検査中。出荷禁止。',
-    notes: '検体サンプルを再検査中',
-    created_at: '2026-09-28T14:00:00Z',
-  },
+export const DEFAULT_DESTINATIONS: string[] = [
+  '株式会社ココウェル',
+  'ココウェル',
 ];
 
 // -------------------------------------------------------------
-// デフォルト 在庫履歴（監査用イミュータブルログ）
+// ロットデータ（実データ入力前のため初期状態は空）
 // -------------------------------------------------------------
-export const DEFAULT_TRANSACTIONS: InventoryTransaction[] = [
-  {
-    id: 'tx-001',
-    lot_id: 'LOT-20260920-VAN-01',
-    product_id: 'prod-vanilla-1l',
-    product_name: 'ソイプレミアム バニラ (業務用 1L)',
-    transaction_type: 'MANUFACTURE_WIP',
-    quantity_change: 40,
-    quantity_after: 40,
-    operator_name: '佐々木 健一',
-    reason: '製造バッチ完了（仕掛品計上）',
-    created_at: '2026-09-20T11:00:00Z',
-  },
-  {
-    id: 'tx-002',
-    lot_id: 'LOT-20260920-VAN-01',
-    product_id: 'prod-vanilla-1l',
-    product_name: 'ソイプレミアム バニラ (業務用 1L)',
-    transaction_type: 'QA_PASS_INITIAL',
-    quantity_change: 0,
-    quantity_after: 40,
-    operator_name: '吉田 恵美',
-    reason: 'HACCP検品合格（内蓋シール・CCP確認完了）により出荷可能在庫へ昇格',
-    created_at: '2026-09-20T16:45:00Z',
-  },
-  {
-    id: 'tx-003',
-    lot_id: 'LOT-20260920-VAN-01',
-    product_id: 'prod-vanilla-1l',
-    product_name: 'ソイプレミアム バニラ (業務用 1L)',
-    transaction_type: 'SHIPMENT',
-    quantity_change: -10,
-    quantity_after: 30,
-    operator_name: '田中 宏明',
-    reason: '出荷引当 (SHP-20261003-001: Vegan Ramen YADOKARI 福岡店)',
-    created_at: '2026-10-03T10:30:00Z',
-  },
-  {
-    id: 'tx-004',
-    lot_id: 'LOT-20260920-VAN-01',
-    product_id: 'prod-vanilla-1l',
-    product_name: 'ソイプレミアム バニラ (業務用 1L)',
-    transaction_type: 'SHIPMENT',
-    quantity_change: -15,
-    quantity_after: 15,
-    operator_name: '佐々木 健一',
-    reason: '出荷引当 (SHP-20261005-002: GREEN BURGER TOKYO 渋谷店)',
-    created_at: '2026-10-05T14:15:00Z',
-  },
-  {
-    id: 'tx-005',
-    lot_id: 'LOT-20261002-CAC-01',
-    product_id: 'prod-cacao-1l',
-    product_name: 'ソイリッチ カカオ (業務用 1L)',
-    transaction_type: 'QA_PASS_INITIAL',
-    quantity_change: 45,
-    quantity_after: 45,
-    operator_name: '吉田 恵美',
-    reason: 'HACCP検品合格（出荷可能在庫化）',
-    created_at: '2026-10-02T16:30:00Z',
-  },
-  {
-    id: 'tx-006',
-    lot_id: 'LOT-20261002-CAC-01',
-    product_id: 'prod-cacao-1l',
-    product_name: 'ソイリッチ カカオ (業務用 1L)',
-    transaction_type: 'SHIPMENT',
-    quantity_change: -5,
-    quantity_after: 40,
-    operator_name: '田中 宏明',
-    reason: '出荷引当 (SHP-20261003-001: Vegan Ramen YADOKARI 福岡店)',
-    created_at: '2026-10-03T10:30:00Z',
-  },
-  {
-    id: 'tx-007',
-    lot_id: 'LOT-20261006-VAN-01',
-    product_id: 'prod-vanilla-1l',
-    product_name: 'ソイプレミアム バニラ (業務用 1L)',
-    transaction_type: 'MANUFACTURE_WIP',
-    quantity_change: 50,
-    quantity_after: 50,
-    operator_name: '田中 宏明',
-    reason: '製造バッチ完了（仕掛品として登録・検品待ち）',
-    created_at: '2026-10-06T09:30:00Z',
-  }
-];
+export const DEFAULT_LOTS: ManufacturingLot[] = [];
 
 // -------------------------------------------------------------
-// デフォルト 出荷データ（ロット紐付け必須）
+// 在庫履歴（実データ入力前のため初期状態は空）
 // -------------------------------------------------------------
-export const DEFAULT_SHIPMENTS: Shipment[] = [
-  {
-    id: 'SHP-20261003-001',
-    destination_name: 'Vegan Ramen YADOKARI 福岡店',
-    destination_address: '福岡県福岡市中央区警固1-2-3',
-    shipment_date: '2026-10-03',
-    delivery_date: '2026-10-04',
-    carrier: 'ヤマト運輸（クール冷凍便）',
-    tracking_number: '4820-1928-3019',
-    status: 'shipped',
-    created_by: '田中 宏明',
-    items: [
-      {
-        id: 'shp-item-01',
-        shipment_id: 'SHP-20261003-001',
-        lot_id: 'LOT-20260920-VAN-01',
-        product_id: 'prod-vanilla-1l',
-        product_name: 'ソイプレミアム バニラ (業務用 1L)',
-        flavor: 'バニラ',
-        quantity: 10,
-        is_fifo_violation: false,
-      },
-      {
-        id: 'shp-item-02',
-        shipment_id: 'SHP-20261003-001',
-        lot_id: 'LOT-20261002-CAC-01',
-        product_id: 'prod-cacao-1l',
-        product_name: 'ソイリッチ カカオ (業務用 1L)',
-        flavor: 'カカオ',
-        quantity: 5,
-        is_fifo_violation: false,
-      }
-    ],
-    notes: '初回納品。店舗冷凍ストッカー（-18℃）直入れ希望',
-    created_at: '2026-10-03T10:30:00Z',
-  },
-  {
-    id: 'SHP-20261005-002',
-    destination_name: 'GREEN BURGER TOKYO 渋谷店',
-    destination_address: '東京都渋谷区神南1-10-5',
-    shipment_date: '2026-10-05',
-    delivery_date: '2026-10-07',
-    carrier: 'ヤマト運輸（クール冷凍便）',
-    tracking_number: '4820-2210-9981',
-    status: 'shipped',
-    created_by: '佐々木 健一',
-    items: [
-      {
-        id: 'shp-item-03',
-        shipment_id: 'SHP-20261005-002',
-        lot_id: 'LOT-20260920-VAN-01',
-        product_id: 'prod-vanilla-1l',
-        product_name: 'ソイプレミアム バニラ (業務用 1L)',
-        flavor: 'バニラ',
-        quantity: 15,
-        is_fifo_violation: false,
-      }
-    ],
-    notes: '定期納品。午前指定',
-    created_at: '2026-10-05T14:15:00Z',
-  }
-];
+export const DEFAULT_TRANSACTIONS: InventoryTransaction[] = [];
 
 // -------------------------------------------------------------
-// ローカルストレージ キー
+// 出荷データ（実データ入力前のため初期状態は空）
+// -------------------------------------------------------------
+export const DEFAULT_SHIPMENTS: Shipment[] = [];
+
+// -------------------------------------------------------------
+// ローカルストレージ キー (v2: 実運用クリーンデータ)
 // -------------------------------------------------------------
 const STORAGE_KEYS = {
-  PRODUCTS: 'soystories_mfg_products_v1',
-  LOTS: 'soystories_mfg_lots_v1',
-  TRANSACTIONS: 'soystories_mfg_transactions_v1',
-  SHIPMENTS: 'soystories_mfg_shipments_v1',
+  PRODUCTS: 'soystories_mfg_products_v2',
+  LOTS: 'soystories_mfg_lots_v2',
+  TRANSACTIONS: 'soystories_mfg_transactions_v2',
+  SHIPMENTS: 'soystories_mfg_shipments_v2',
 };
 
 // -------------------------------------------------------------

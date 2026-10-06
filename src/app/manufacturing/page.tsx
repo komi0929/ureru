@@ -75,9 +75,9 @@ export default function ManufacturingPage() {
   // -------------------------------------------------------------
   // タブ1: 製造登録・仕掛品 (WIP) State & Handlers
   // -------------------------------------------------------------
-  const [newLotProduct, setNewLotProduct] = useState<string>('prod-vanilla-1l');
+  const [newLotProduct, setNewLotProduct] = useState<string>('prod-cup-plain');
   const [newLotOperator, setNewLotOperator] = useState<string>('田中 宏明');
-  const [newLotQuantity, setNewLotQuantity] = useState<number>(50);
+  const [newLotQuantity, setNewLotQuantity] = useState<number>(65); // 1仕込み標準 65個
   const [newLotNotes, setNewLotNotes] = useState<string>('');
 
   const handleCreateWip = (e: React.FormEvent) => {
@@ -215,10 +215,10 @@ export default function ManufacturingPage() {
   // -------------------------------------------------------------
   // タブ4: ロット指定出荷 ＆ FIFO強制 State & Handlers
   // -------------------------------------------------------------
-  const [shipDestination, setShipDestination] = useState('Vegan Cafe LOHAS 警固店');
-  const [shipProduct, setShipProduct] = useState('prod-vanilla-1l');
+  const [shipDestination, setShipDestination] = useState('株式会社ココウェル');
+  const [shipProduct, setShipProduct] = useState('prod-cup-plain');
   const [shipLotId, setShipLotId] = useState('');
-  const [shipQuantity, setShipQuantity] = useState<number>(5);
+  const [shipQuantity, setShipQuantity] = useState<number>(20);
   const [shipOperator, setShipOperator] = useState('田中 宏明');
   const [shipFifoReason, setShipFifoReason] = useState('');
   const [shipCarrier, setShipCarrier] = useState('ヤマト運輸（クール冷凍便）');
@@ -271,9 +271,9 @@ export default function ManufacturingPage() {
   // -------------------------------------------------------------
   // タブ5: 一気通貫トレーサビリティ State & Handlers
   // -------------------------------------------------------------
-  const [searchLotQuery, setSearchLotQuery] = useState('LOT-20260920-VAN-01');
-  const [searchDestQuery, setSearchDestQuery] = useState('YADOKARI');
-  const [traceSearchType, setTraceSearchType] = useState<'lot' | 'destination'>('lot');
+  const [searchLotQuery, setSearchLotQuery] = useState('');
+  const [searchDestQuery, setSearchDestQuery] = useState('ココウェル');
+  const [traceSearchType, setTraceSearchType] = useState<'lot' | 'destination'>('destination');
 
   const lotTraceResult = searchLotQuery.trim() 
     ? manufacturingStore.getTraceabilityByLot(searchLotQuery.trim()) 
@@ -1042,6 +1042,14 @@ export default function ManufacturingPage() {
                     </div>
                   );
                 })}
+
+              {lots.filter(l => stockStatusFilter === 'ALL' || l.status === stockStatusFilter).length === 0 && (
+                <div className="col-span-full bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs text-slate-400 space-y-2">
+                  <Boxes className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="font-semibold text-slate-600">現在、該当するロット在庫はありません。</p>
+                  <p className="text-[11px] text-slate-400">「① 製造登録」からプレーンまたはカカオの製造バッチを登録し、検品ゲートを通過させてください。</p>
+                </div>
+              )}
             </div>
 
             {/* 改ざん不可（イミュータブル）監査ログ一覧 */}
@@ -1065,67 +1073,73 @@ export default function ManufacturingPage() {
                 </span>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-100 text-slate-400 text-[10px] uppercase">
-                      <th className="py-2 px-3">日時</th>
-                      <th className="py-2 px-3">ロットID</th>
-                      <th className="py-2 px-3">操作種別</th>
-                      <th className="py-2 px-3 text-right">変動数</th>
-                      <th className="py-2 px-3 text-right">変動後</th>
-                      <th className="py-2 px-3">担当者</th>
-                      <th className="py-2 px-3">必須理由・メモ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {transactions.slice(0, 10).map(tx => (
-                      <tr key={tx.id} className="hover:bg-slate-50/50">
-                        <td className="py-2.5 px-3 text-[11px] text-slate-500 whitespace-nowrap">
-                          {tx.created_at.slice(0, 16).replace('T', ' ')}
-                        </td>
-                        <td className="py-2.5 px-3 font-mono font-bold text-slate-900 whitespace-nowrap">
-                          {tx.lot_id}
-                        </td>
-                        <td className="py-2.5 px-3 whitespace-nowrap">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            tx.transaction_type === 'MANUFACTURE_WIP'
-                              ? 'bg-amber-100 text-amber-900'
-                              : tx.transaction_type === 'QA_PASS_INITIAL'
-                              ? 'bg-emerald-100 text-emerald-900'
-                              : tx.transaction_type === 'SHIPMENT'
-                              ? 'bg-blue-100 text-blue-900'
-                              : tx.transaction_type === 'QUARANTINE_SCRAP'
-                              ? 'bg-rose-100 text-rose-900'
-                              : 'bg-purple-100 text-purple-900'
-                          }`}>
-                            {tx.transaction_type}
-                          </span>
-                        </td>
-                        <td className={`py-2.5 px-3 font-mono font-bold text-right whitespace-nowrap ${
-                          tx.quantity_change > 0 
-                            ? 'text-emerald-600' 
-                            : tx.quantity_change < 0 
-                            ? 'text-rose-600' 
-                            : 'text-slate-400'
-                        }`}>
-                          {tx.quantity_change > 0 ? `+${tx.quantity_change}` : tx.quantity_change}
-                        </td>
-                        <td className="py-2.5 px-3 font-mono font-semibold text-slate-900 text-right whitespace-nowrap">
-                          {tx.quantity_after} 本
-                        </td>
-                        <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap">
-                          {tx.operator_name}
-                        </td>
-                        <td className="py-2.5 px-3 text-slate-600 text-[11px]">
-                          {tx.reason}
-                          {tx.notes && <span className="text-slate-400 ml-1">({tx.notes})</span>}
-                        </td>
+              {transactions.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-400 bg-slate-50/50 rounded-xl border border-slate-100">
+                  まだ在庫変動履歴（監査ログ）はありません。製造登録・検品・出荷を行うと改ざん不可ログがリアルタイムに記録されます。
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-slate-400 text-[10px] uppercase">
+                        <th className="py-2 px-3">日時</th>
+                        <th className="py-2 px-3">ロットID</th>
+                        <th className="py-2 px-3">操作種別</th>
+                        <th className="py-2 px-3 text-right">変動数</th>
+                        <th className="py-2 px-3 text-right">変動後</th>
+                        <th className="py-2 px-3">担当者</th>
+                        <th className="py-2 px-3">必須理由・メモ</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {transactions.slice(0, 10).map(tx => (
+                        <tr key={tx.id} className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-3 text-[11px] text-slate-500 whitespace-nowrap">
+                            {tx.created_at.slice(0, 16).replace('T', ' ')}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-900 whitespace-nowrap">
+                            {tx.lot_id}
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              tx.transaction_type === 'MANUFACTURE_WIP'
+                                ? 'bg-amber-100 text-amber-900'
+                                : tx.transaction_type === 'QA_PASS_INITIAL'
+                                ? 'bg-emerald-100 text-emerald-900'
+                                : tx.transaction_type === 'SHIPMENT'
+                                ? 'bg-blue-100 text-blue-900'
+                                : tx.transaction_type === 'QUARANTINE_SCRAP'
+                                ? 'bg-rose-100 text-rose-900'
+                                : 'bg-purple-100 text-purple-900'
+                            }`}>
+                              {tx.transaction_type}
+                            </span>
+                          </td>
+                          <td className={`py-2.5 px-3 font-mono font-bold text-right whitespace-nowrap ${
+                            tx.quantity_change > 0 
+                              ? 'text-emerald-600' 
+                              : tx.quantity_change < 0 
+                              ? 'text-rose-600' 
+                              : 'text-slate-400'
+                          }`}>
+                            {tx.quantity_change > 0 ? `+${tx.quantity_change}` : tx.quantity_change}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono font-semibold text-slate-900 text-right whitespace-nowrap">
+                            {tx.quantity_after} 本
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap">
+                            {tx.operator_name}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 text-[11px]">
+                            {tx.reason}
+                            {tx.notes && <span className="text-slate-400 ml-1">({tx.notes})</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* 棚卸調整モーダル */}
@@ -1263,9 +1277,34 @@ export default function ManufacturingPage() {
                     value={shipDestination}
                     onChange={(e) => setShipDestination(e.target.value)}
                     required
-                    placeholder="例: Vegan Cafe LOHAS 警固店"
+                    placeholder="例: 株式会社ココウェル"
                     className="w-full text-xs font-semibold px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-teal-500 focus:outline-none transition-colors"
                   />
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="text-[10px] text-slate-400">納品先指定:</span>
+                    <button
+                      type="button"
+                      onClick={() => setShipDestination('株式会社ココウェル')}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md border transition-colors cursor-pointer ${
+                        shipDestination === '株式会社ココウェル'
+                          ? 'bg-teal-600 text-white border-teal-600'
+                          : 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100'
+                      }`}
+                    >
+                      株式会社ココウェル
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShipDestination('ココウェル')}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md border transition-colors cursor-pointer ${
+                        shipDestination === 'ココウェル'
+                          ? 'bg-teal-600 text-white border-teal-600'
+                          : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                      }`}
+                    >
+                      ココウェル
+                    </button>
+                  </div>
                 </div>
 
                 <div>
@@ -1492,37 +1531,37 @@ export default function ManufacturingPage() {
                         type="text"
                         value={searchLotQuery}
                         onChange={(e) => setSearchLotQuery(e.target.value)}
-                        placeholder="LOT-20260920-VAN-01"
+                        placeholder="例: LOT-20261006-PLN-01"
                         className="flex-1 text-xs font-mono font-bold px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-500 focus:outline-none"
                       />
                       <button
                         type="button"
-                        onClick={() => setSearchLotQuery('LOT-20260920-VAN-01')}
+                        onClick={() => setSearchLotQuery(lots[0]?.lot_id || 'LOT-20261006-PLN-01')}
                         className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
                       >
-                        サンプル
+                        最新ロット
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      納品先店舗名を入力 (例: YADOKARI, GREEN BURGER)
+                      納品先名を入力 (例: ココウェル)
                     </label>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={searchDestQuery}
                         onChange={(e) => setSearchDestQuery(e.target.value)}
-                        placeholder="YADOKARI"
+                        placeholder="ココウェル"
                         className="flex-1 text-xs font-bold px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-500 focus:outline-none"
                       />
                       <button
                         type="button"
-                        onClick={() => setSearchDestQuery('YADOKARI')}
+                        onClick={() => setSearchDestQuery('ココウェル')}
                         className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
                       >
-                        サンプル
+                        ココウェル
                       </button>
                     </div>
                   </div>
