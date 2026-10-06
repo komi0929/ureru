@@ -19,7 +19,9 @@ import {
   Truck,
   ShoppingBag,
   ExternalLink,
-  Share2
+  Share2,
+  Factory,
+  ShieldCheck
 } from 'lucide-react';
 import TutorialModal from '@/components/cost/TutorialModal';
 
@@ -75,45 +77,38 @@ export default function PortalHomePage() {
             利用するアプリケーションを選択
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xl mx-auto">
-            オンライン発注ポータル・受注管理、B2B新規営業促進、レシピ原価粗利管理、直営店舗経営分析の4大基幹システムをご利用いただけます。
+            受発注管理、製造・HACCP品質管理、営業促進、レシピ原価粗利、店舗経営分析の5大基幹システムをご利用いただけます。
           </p>
         </div>
 
         {/* New Feature Notice Banner */}
         <div className="w-full max-w-5xl mb-8 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200/80 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <ShoppingBag className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Factory className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.2 rounded-md">NEW</span>
-                <strong className="text-xs font-bold text-slate-900">B2B受発注管理 ＆ オンライン発注ポータルを開設しました</strong>
+                <span className="text-[10px] font-bold bg-teal-600 text-white px-2 py-0.2 rounded-md">NEW</span>
+                <strong className="text-xs font-bold text-slate-900">製造・HACCP品質管理 ＆ トレーサビリティ機能を開設しました</strong>
               </div>
               <p className="text-[11px] text-slate-600 mt-0.5">
-                取引先様へご案内可能な発注URL発行、1L/2Lバルク選択、ヤマト冷凍便送料自動計算、月末締め請求書連動に対応しています。
+                仕掛品（WIP）混入ゼロ化、4大CCPデジタル検品ゲート、ロット指定FIFO出荷強制、改ざん不可監査ログに対応。
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
             <Link
-              href="/orders"
-              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+              href="/manufacturing"
+              className="text-xs font-bold px-3.5 py-1.5 rounded-xl bg-teal-700 text-white hover:bg-teal-800 transition-colors shadow-2xs"
             >
-              受注管理画面へ →
-            </Link>
-            <Link
-              href="/order"
-              target="_blank"
-              className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-50 transition-colors flex items-center gap-1"
-            >
-              発注画面を開く ↗
+              製造管理を開く →
             </Link>
           </div>
         </div>
 
-        {/* 4 Main Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-7xl">
+        {/* 5 Main Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-7xl">
           
           {/* Card 1: B2B受発注・オンライン発注 (ORDER HUB) - 新設！ */}
           <div className="bg-white rounded-2xl border-2 border-emerald-500/80 p-6 shadow-sm hover:shadow-lg hover:border-emerald-600 transition-all duration-200 flex flex-col justify-between group relative overflow-hidden ring-2 ring-emerald-500/10">
@@ -175,6 +170,67 @@ export default function PortalHomePage() {
                   <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
                   <span>お客様用 発注画面 ↗</span>
                 </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: 製造・HACCP品質管理 (FACTORY & TRACE) - 新設！ */}
+          <div className="bg-white rounded-2xl border-2 border-teal-500/80 p-6 shadow-sm hover:shadow-lg hover:border-teal-600 transition-all duration-200 flex flex-col justify-between group relative overflow-hidden ring-2 ring-teal-500/10">
+            <div className="absolute top-0 right-0 bg-gradient-to-l from-teal-600 to-cyan-600 text-white font-bold text-[9px] px-3 py-0.5 rounded-bl-lg tracking-wider">
+              NEW MODE
+            </div>
+
+            <div>
+              {/* Card Header Icon & Badge */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-11 h-11 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700">
+                  <Factory className="w-5 h-5" />
+                </div>
+                <span className="text-[11px] font-bold text-teal-800 bg-teal-100 px-2 py-0.5 rounded-md border border-teal-300">
+                  製造 ＆ HACCP品質保証
+                </span>
+              </div>
+
+              {/* Title & Description */}
+              <h2 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-teal-700 transition-colors">
+                製造・品質管理 <span className="text-xs font-semibold text-slate-400 font-mono ml-1">FACTORY HUB</span>
+              </h2>
+              <p className="text-xs text-slate-500 leading-relaxed mb-5">
+                仕掛品（WIP）混入ゼロ、4大CCPデジタル検品ゲート、最古ロット自動推奨のFIFO強制出荷、改ざん不可監査ログ。
+              </p>
+
+              {/* Feature List */}
+              <div className="space-y-2 mb-6 border-t border-slate-100 pt-4 text-[11px] text-slate-600">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>
+                  <span>仕掛品（WIP）出荷混入防止ゲート</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>
+                  <span>HACCP準拠 4大CCPデジタル検品</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>
+                  <span>ロット指定出荷 ＆ FIFO（先入れ先出し）強制</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-2">
+              <Link
+                href="/manufacturing"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs transition-all shadow-md shadow-teal-600/20 active:scale-95 cursor-pointer"
+              >
+                <span>製造管理を開く</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                <span className="hover:text-slate-800 transition-colors">仕掛品WIP</span>
+                <span>·</span>
+                <span className="hover:text-slate-800 transition-colors">検品QAゲート</span>
+                <span>·</span>
+                <span className="hover:text-slate-800 transition-colors">トレーサビリティ</span>
               </div>
             </div>
           </div>

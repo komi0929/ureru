@@ -11,8 +11,13 @@ import StoreSidebar from '@/components/store/StoreSidebar';
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // 1. TOPポータルハブ画面 ＆ お客様向け発注ポータル（フルスクリーン・スタンドアロン）
-  if (pathname === '/' || pathname === '/order') {
+  // 1. TOPポータル / お客様発注画面 / 製造管理 / 受発注管理（フルスクリーン・スタンドアロン）
+  if (
+    pathname === '/' || 
+    pathname === '/order' || 
+    pathname.startsWith('/manufacturing') || 
+    pathname.startsWith('/orders')
+  ) {
     return (
       <div className="min-h-screen w-full bg-slate-50/60 text-slate-900 flex flex-col">
         {children}

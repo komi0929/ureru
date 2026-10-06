@@ -15,6 +15,7 @@ import {
   Layers,
   Calculator,
   ArrowLeft,
+  Factory,
 } from 'lucide-react';
 
 const navItems = [
@@ -24,6 +25,7 @@ const navItems = [
   { name: 'リード管理', href: '/leads', icon: Users },
   { name: 'サンプル管理', href: '/samples', icon: Package },
   { name: '受発注', href: '/orders', icon: ShoppingCart },
+  { name: '製造・品質管理', href: '/manufacturing', icon: Factory },
   { name: '分析', href: '/analytics', icon: BarChart3 },
   { name: '設定', href: '/settings', icon: Settings },
 ];
@@ -48,6 +50,16 @@ export default function Sidebar() {
         >
           <ArrowLeft className="w-3.5 h-3.5 text-slate-400" />
           <span>TOPポータルに戻る</span>
+        </Link>
+        <Link
+          href="/manufacturing"
+          className="flex items-center justify-between px-2.5 py-2 text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors border border-teal-200/80"
+        >
+          <span className="flex items-center gap-2">
+            <Factory className="w-4 h-4 text-teal-600" />
+            <span>製造・品質管理へ</span>
+          </span>
+          <span className="text-[10px] bg-teal-200/80 px-1 py-0.5 rounded">切替</span>
         </Link>
         <Link
           href="/cost/recipes"
