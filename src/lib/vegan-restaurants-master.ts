@@ -2247,6 +2247,74 @@ export const VEGAN_RESTAURANTS_MASTER: VeganRestaurantItem[] = [
   }
 ];
 
+const KNOWN_OPTIONS = [
+  'kitchen haco', '一粒庵', '新横浜ラーメン博物館',
+  'Afuri', 'AFURI', '一風堂', 'IPPUDO',
+  'ソラノイロ', 'SORANOIRO', '九州じゃんがら',
+  '麺屋武蔵', '蒙古タンメン', '一蘭',
+  'ハードロックカフェ', 'Hard Rock Cafe',
+  'サラベス', 'bills', 'DEAN & DELUCA',
+  'ロイヤルホスト', 'モスバーガー'
+];
+
+const KNOWN_PURE = [
+  'soystories', 'ソイストーリーズ',
+  'Ain Soph', 'AIN SOPH', 'アインソフ',
+  'T\'s たんたん', 'T\'s レストラン', 'Ts たんたん',
+  '2foods', 'トゥーフーズ',
+  'Vegan Ramen UZU', 'Vegan Ramen YADOKARI',
+  'BUGORO', '船出屋', 'まるたん',
+  'wired bonbon', 'ブラウンライス', 'BROWN RICE',
+  'Peace Cafe', 'ピースカフェ', 'TRUEBERRY', 'トゥルーベリー',
+  'Loving Hut', 'ラビングハット', 'チャヤマクロビ', 'CHAYA',
+  'ORGANIC TABLE BY LAPAZ', 'THE FARM CAFE', 'Mr.FARMER',
+  'Alaska zwei', 'アラスカ ツヴァイ', 'Sonu Sonu', 'ソヌソヌ',
+  'Guruatsu', 'グルアツ', 'PQ\'s', 'ピィキィズ',
+  '菜食健美', '健福', '中里花苑', '忠庵',
+  '大豆の夢', 'グレイスフルスイーツ', 'Hal Cafe 22',
+  'Coco ChouChou', 'ココシュシュ', 'パプリカ食堂',
+  '松竹圓', 'Shochiku-en', 'サイラム', 'SAIRAM',
+  'Ballon', 'バロン', 'Great Lakes', 'グレイトレイクス',
+  'Terra Burger', 'テラバーガー', 'Superiority Burger',
+  '素食', '精進料理', '普茶料理'
+];
+
+export function classifyDietary(item: VeganRestaurantItem): '100%_vegan' | 'vegan_friendly' {
+  const text = (item.name + ' ' + (item.profile_text || '') + ' ' + (item.features || []).join(' ')).toLowerCase();
+  if (KNOWN_OPTIONS.some(k => item.name.toLowerCase().includes(k.toLowerCase()))) {
+    return 'vegan_friendly';
+  }
+  if (KNOWN_PURE.some(k => item.name.toLowerCase().includes(k.toLowerCase()))) {
+    return '100%_vegan';
+  }
+  if (
+    item.features?.includes('ヴィーガンメニューあり') || 
+    item.features?.includes('ヴィーガン対応') || 
+    text.includes('ヴィーガンメニューあり') ||
+    text.includes('ヴィーガン対応') ||
+    text.includes('ヴィーガンプレートなど') ||
+    text.includes('一部ヴィーガン') ||
+    text.includes('オプション')
+  ) {
+    return 'vegan_friendly';
+  }
+  if (
+    item.features?.includes('100%植物性') ||
+    item.features?.includes('100%ヴィーガン') ||
+    text.includes('完全ヴィーガン') ||
+    text.includes('ヴィーガン専門') ||
+    text.includes('プラントベース専門') ||
+    text.includes('100% plant') ||
+    text.includes('all vegan')
+  ) {
+    return '100%_vegan';
+  }
+  if (item.id.startsWith('vegan-vm-')) {
+    return 'vegan_friendly';
+  }
+  return '100%_vegan';
+}
+
 /**
  * 営業用リード型（Lead）への変換ヘルパー
  */
@@ -2265,6 +2333,7 @@ export function getInitialVeganLeads(): Lead[] {
       area: item.area,
       prefecture: item.prefecture,
       features: item.features,
+      dietary_type: classifyDietary(item),
       status: 'new',
       priority: 'high',
       tags: [item.prefecture, item.genre, ...item.features],

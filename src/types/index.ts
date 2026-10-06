@@ -48,6 +48,7 @@ export interface Lead {
   area?: string | null;
   prefecture?: string | null;
   features?: string[];
+  dietary_type?: '100%_vegan' | 'vegan_friendly';
   excluded?: boolean;
 }
 

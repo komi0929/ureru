@@ -108,6 +108,7 @@ export default function SalesBoardPage() {
   const [genre, setGenre] = useState('all');
   const [prefecture, setPrefecture] = useState('all');
   const [stageFilter, setStageFilter] = useState<Stage | 'all'>('all');
+  const [dietaryFilter, setDietaryFilter] = useState<'all' | '100%_vegan' | 'vegan_friendly'>('all');
   const [showExcluded, setShowExcluded] = useState(false);
 
   // UI
@@ -228,9 +229,13 @@ export default function SalesBoardPage() {
     return c;
   }, [activeLeads, stageOf]);
 
+  const pureCount = useMemo(() => activeLeads.filter(l => l.dietary_type === '100%_vegan').length, [activeLeads]);
+  const optionCount = useMemo(() => activeLeads.filter(l => l.dietary_type === 'vegan_friendly').length, [activeLeads]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (showExcluded ? leads.filter(l => excludedIds.includes(l.id)) : activeLeads).filter(l => {
+      if (dietaryFilter !== 'all' && (l.dietary_type || '100%_vegan') !== dietaryFilter) return false;
       if (genre !== 'all' && (l.genre || l.business_type) !== genre) return false;
       if (prefecture !== 'all' && l.prefecture !== prefecture) return false;
       if (!showExcluded && view === 'table' && stageFilter !== 'all' && stageOf(l) !== stageFilter) return false;
@@ -240,7 +245,7 @@ export default function SalesBoardPage() {
       }
       return true;
     });
-  }, [leads, activeLeads, excludedIds, showExcluded, genre, prefecture, stageFilter, query, view, stageOf, memos]);
+  }, [leads, activeLeads, excludedIds, showExcluded, dietaryFilter, genre, prefecture, stageFilter, query, view, stageOf, memos]);
 
   const total = activeLeads.length;
   const touched = total - stageCounts.new;
@@ -311,6 +316,53 @@ export default function SalesBoardPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* 営業ターゲット区分（100%専門店 vs ヴィーガン対応店） */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold text-slate-500 mr-1">営業対象区分:</span>
+          <button
+            onClick={() => setDietaryFilter('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+              dietaryFilter === 'all'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            全店舗 ({activeLeads.length})
+          </button>
+          <button
+            onClick={() => setDietaryFilter('100%_vegan')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+              dietaryFilter === '100%_vegan'
+                ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs'
+                : 'bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50'
+            }`}
+          >
+            <span>🌱</span>
+            <span>100%ヴィーガン専門店 ({pureCount})</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-medium ${
+              dietaryFilter === '100%_vegan' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-900'
+            }`}>
+              最優先営業対象
+            </span>
+          </button>
+          <button
+            onClick={() => setDietaryFilter('vegan_friendly')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+              dietaryFilter === 'vegan_friendly'
+                ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
+                : 'bg-white text-amber-800 border-amber-200 hover:bg-amber-50'
+            }`}
+          >
+            <span>🥗</span>
+            <span>ヴィーガン対応・一般店 ({optionCount})</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-medium ${
+              dietaryFilter === 'vegan_friendly' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900'
+            }`}>
+              一部メニュー対応
+            </span>
+          </button>
         </div>
 
         {/* ツールバー */}
@@ -388,7 +440,20 @@ export default function SalesBoardPage() {
                             </a>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{lead.genre || lead.business_type}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <div className="text-slate-700 font-medium">{lead.genre || lead.business_type}</div>
+                          <div className="mt-0.5">
+                            {lead.dietary_type === '100%_vegan' ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                                🌱 100%専門店
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60">
+                                🥗 オプション対応
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">
                           {lead.prefecture}
                           {lead.area && <div className="text-[11px] text-slate-400">{lead.area}</div>}
@@ -484,8 +549,19 @@ export default function SalesBoardPage() {
                         className={`bg-white rounded-xl border border-slate-200 p-3 shadow-2xs cursor-grab active:cursor-grabbing ${dragId === lead.id ? 'opacity-50' : ''}`}
                       >
                         <div className="text-sm font-semibold text-slate-900 leading-snug">{lead.name}</div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
-                          {lead.genre || lead.business_type} ・ {lead.prefecture}
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1 flex-wrap">
+                          <span>{lead.genre || lead.business_type}</span>
+                          <span>・</span>
+                          <span>{lead.prefecture}</span>
+                          {lead.dietary_type === '100%_vegan' ? (
+                            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/60 ml-auto">
+                              🌱 100%
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/60 ml-auto">
+                              🥗 オプション
+                            </span>
+                          )}
                         </div>
                         {memos[lead.id] && (
                           <div className="text-[11px] text-slate-600 bg-slate-50 rounded-md px-2 py-1 mt-2 line-clamp-2">{memos[lead.id]}</div>
